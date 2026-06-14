@@ -32,58 +32,6 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'to-osn-kimia-2025';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' 
-        ? JSON.parse(__firebase_config) 
-        : {
-            apiKey: "",
-            authDomain: "mock-project.firebaseapp.com",
-            projectId: "mock-project",
-            storageBucket: "mock-project.appspot.com",
-            messagingSenderId: "12345678",
-            appId: "1:12345678:web:123456"
-          };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    window.appId = appId;
-    window.db = db;
-    window.auth = auth;
-    window.firestoreCollection = collection(db, 'artifacts', appId, 'public', 'data', 'submissions');
-
-    // Expose Firestore methods to global window object so they can be accessed in normal script blocks
-    window.doc = doc;
-    window.setDoc = setDoc;
-    window.getDocs = getDocs;
-    window.collection = collection;
-    window.deleteDoc = deleteDoc;
-
-    // Handle authentication setup
-    const initAuth = async () => {
-        try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-        } catch (e) {
-            console.warn("Firebase Auth bypassed/offline mode.");
-        }
-    };
-    initAuth();
-
-    onAuthStateChanged(auth, (user) => {
-        window.currentUser = user;
-    });
-</script>
-
 <div id="app" class="flex-grow flex flex-col">
     <!-- Header -->
     <header class="bg-indigo-900 text-white shadow-md border-b border-indigo-800 py-4 px-6 sticky top-0 z-40">
@@ -129,6 +77,12 @@
                 <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider">Registrasi Peserta</span>
                 <h2 class="text-2xl font-extrabold text-slate-900 mt-4">Simulasi OSN Kimia 2025</h2>
                 <p class="text-sm text-slate-500 mt-2">Isikan biodata Anda untuk memulai pengerjaan Try-Out dan merekam hasil pengerjaan ke database guru.</p>
+            </div>
+
+            <!-- Fail-safe load indicator badge -->
+            <div id="connection-status-badge" class="mb-6 p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-500 flex items-center gap-2.5 justify-center">
+                <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse" id="status-dot"></span>
+                <span id="status-text">Menginisialisasi sistem...</span>
             </div>
 
             <form id="regForm" onsubmit="startTO(event)" class="space-y-6">
@@ -305,7 +259,7 @@
                         <i class="fa-solid fa-clock-rotate-left"></i> Waktu Pengerjaan: <strong id="stat-time-spent" class="text-slate-800">0 menit</strong>
                     </div>
                     <div class="text-xs text-indigo-600 font-semibold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> Data nilai Anda telah disimpan secara aman ke Panel Guru.
+                        <i class="fa-solid fa-cloud-arrow-up"></i> <span id="sync-status-msg">Data nilai disimpan aman ke database.</span>
                     </div>
                     <button onclick="scrollToReview()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2">
                         Buka Pembahasan <i class="fa-solid fa-arrow-down"></i>
@@ -545,6 +499,61 @@
 </div>
 
 <script>
+    // Global Safe Firebase & System Config State
+    let db = null;
+    let auth = null;
+    let firebaseEnabled = false;
+    let firestoreCollection = null;
+
+    // Load Firebase dynamically & gracefully to prevent parsing blockages
+    async function tryInitFirebase() {
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        try {
+            const firebaseConfig = {
+                apiKey: "", // Diisi opsional oleh admin guru
+                authDomain: "mock-project.firebaseapp.com",
+                projectId: "mock-project",
+                storageBucket: "mock-project.appspot.com",
+                messagingSenderId: "12345678",
+                appId: "1:12345678:web:123456"
+            };
+
+            // Dynamic imports
+            const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+            const { getAuth, signInAnonymously } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+            const { getFirestore, doc, setDoc, getDocs, collection } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            try {
+                await signInAnonymously(auth);
+            } catch (ae) {
+                console.warn("Auth bypass.");
+            }
+
+            // Expose helpers globally safely
+            window.db = db;
+            window.auth = auth;
+            window.doc = doc;
+            window.setDoc = setDoc;
+            window.getDocs = getDocs;
+            window.collection = collection;
+            firebaseEnabled = true;
+            firestoreCollection = collection(db, 'artifacts', 'to-osn-kimia-2025', 'public', 'data', 'submissions');
+
+            statusDot.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
+            statusText.textContent = "Sistem database online & siap sinkronisasi.";
+        } catch (e) {
+            console.warn("Firebase failed to load. Operating in safe standalone offline backup mode.", e);
+            statusDot.className = "h-2 w-2 rounded-full bg-indigo-500";
+            statusText.textContent = "Mode Offline Aktif (Nilai disimpan lokal di browser).";
+        }
+    }
+
     // 50 completely modified and customized chemistry questions that correspond with standard syllabus difficulty
     const quizQuestions = [
         // --- 1. Ksp dan Kelarutan (Soal #1 - #7) ---
@@ -716,7 +725,7 @@
                 "121,5 nm"
             ],
             answer: 0, // A
-            explanation: "Langkah penyelesaian:\n1. Persamaan Rydberg untuk atom berelektron tunggal:\n   1/λ = R × Z² × (1/n_akhir² - 1/n_awal²)\n2. Nilai R ≈ 1,097 × 10⁷ m⁻¹, Z = 4 (Beryllium):\n   1/λ = (1,097 × 10⁷) × 16 × (1/2² - 1/4²)\n   1/λ = (1,097 × 10⁷) × 16 × (3/16) = 3,291 × 10⁷ m⁻¹\n3. λ = 1 / (3,291 × 10⁷) = 3,04 × 10⁻⁸ m = 30,4 nm."
+            explanation: "Langkah penyelesaian:\n1. Persamaan Rydberg untuk atom berelektron tunggal:\n   1/λ = R × Z² × (1/n_akhir² - 1/n_awal²)\n2. Nilai R ≈ 1,097 × 10⁷ m⁻¹, Z = 4 (Beryllium):\n   1/λ = (1,097 × 10⁷) × 16 × (3/16) = 3,291 × 10⁷ m⁻¹\n3. λ = 1 / (3,291 × 10⁷) = 3,04 × 10⁻⁸ m = 30,4 nm."
         },
         {
             id: 13,
@@ -844,7 +853,7 @@
                 "Cu₂Cl"
             ],
             answer: 1, // B
-            explanation: "Langkah penyelesaian:\n1. Hitung muatan listrik total Q = I × t = 0,150 A × 12864 s = 1929,6 C\n2. Mol elektron = Q / F = 1929,6 / 96500 = 0,020 mol elektron\n3. Jika garam adalah CuCl₂, maka kation yang dilepaskan adalah Cu²⁺. Maka, mol Cu = mol e⁻ / 2 = 0,010 mol\n4. Massa molar garam anhidrat CuCl₂:\n   Mr = 1,345 g / 0,010 mol = 134,5 g/mol, yang sangat sesuai dengan massa rumus relatif CuCl₂ (Ar Cu = 63,55; Cl = 35,45)."
+            explanation: "Langkah penyelesaian:\n1. Hitung muatan listrik total Q = I × t = 0,150 A × 12864 s = 1929,6 C\n2. Mol elektron = Q / F = 1929,6 / 96500 = 0,020 mol elektron\n3. Jika garam adalah CuCl₂, maka kation yang dilepaskan adalah Cu²⁺. Maka, mol Cu = mol e⁻ / 2 = 0,010 mol\n4. Massa molar garam anhidrat CuCl₂:\n   Mr = 1,345 g / 0,010 mol = 134,5 g/mol, yang sangat sesuai dengan masa rumus relatif CuCl₂ (Ar Cu = 63,55; Cl = 35,45)."
         },
 
         // --- 4. Termokimia - Termodinamika (Soal #22 - #27) ---
@@ -1277,7 +1286,7 @@
     let studentSchool = "";
     let cachedTeacherSubmissions = [];
 
-    // Load simple synthesizer feedback (Rule clean sandbox audio)
+    // Synthesizer feedback (Audio)
     function playBeep(type = 'click') {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1302,6 +1311,8 @@
     }
 
     window.onload = function() {
+        // Kick off dynamic Firebase system load
+        tryInitFirebase();
         renderNavigationGrid();
     }
 
@@ -1595,18 +1606,19 @@
 
         renderReviewPanel();
 
-        // Push to Firebase (Rules 1, 2, 3)
+        // Push to Firebase with non-blocking error handler (Fail-Safe)
         await syncResultToCloud(userScore, correctCount, incorrectCount, timeSpentMin, correctArray);
     }
 
     async function syncResultToCloud(score, correct, incorrect, timeSpent, correctArray) {
-        const uid = (window.auth && window.auth.currentUser) ? window.auth.currentUser.uid : 'off-' + crypto.randomUUID().substring(0, 5);
+        // Universal unique safe id generation (guaranteed compatible everywhere)
+        const uid = 'stud-' + Math.random().toString(36).substring(2, 10);
+        const syncMsg = document.getElementById('sync-status-msg');
 
-        // Rule 1: path is /artifacts/{appId}/public/data/{collectionName}/{documentId}
-        if (window.db && window.auth && window.auth.currentUser) {
+        if (firebaseEnabled && db) {
             try {
-                // Access the doc and setDoc methods via the global window scope
-                const docRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'submissions', uid);
+                // Accessing variables globally
+                const docRef = window.doc(db, 'artifacts', 'to-osn-kimia-2025', 'public', 'data', 'submissions', uid);
                 await window.setDoc(docRef, {
                     name: studentName,
                     school: studentSchool,
@@ -1618,9 +1630,13 @@
                     answers: userAnswers,
                     timestamp: new Date().toISOString()
                 });
+                syncMsg.textContent = "Data nilai tersinkronisasi aman ke Cloud Database.";
             } catch (err) {
-                console.error("Gagal sinkronisasi data ke cloud.", err);
+                console.error("Cloud syncing failed, saving locally.", err);
+                syncMsg.textContent = "Disimpan lokal di browser (Gagal koneksi cloud).";
             }
+        } else {
+            syncMsg.textContent = "Disimpan lokal di browser (Sistem Offline).";
         }
         
         // Save local backup anyway
@@ -1767,19 +1783,19 @@
     async function fetchTeacherData() {
         let submissions = [];
 
-        // Rule 2: Get all documents using standard simple collection query
-        if (window.db && window.auth && window.auth.currentUser) {
+        // Fetch submissions from Firebase if connected
+        if (firebaseEnabled && db && firestoreCollection) {
             try {
-                const qSnap = await window.getDocs(window.firestoreCollection);
+                const qSnap = await window.getDocs(firestoreCollection);
                 qSnap.forEach((doc) => {
                     submissions.push(doc.data());
                 });
             } catch (err) {
-                console.warn("Firestore error or disconnected. Loading offline memory array.", err);
+                console.warn("Firestore collection fetching bypassed.");
             }
         }
 
-        // Fallback or Merge local backups
+        // Merge local backups
         const local = JSON.parse(localStorage.getItem('local_osn_subs') || '[]');
         local.forEach(l => {
             if (!submissions.some(s => s.name === l.name && s.school === l.school)) {
@@ -1787,12 +1803,12 @@
             }
         });
 
-        // Add some premium mock candidates if empty to demonstrate functionality
+        // Mock data fallback if nothing in db/local
         if (submissions.length === 0) {
             submissions = getMockSubmissions();
         }
 
-        // Sort descending
+        // Sort descending by score
         submissions.sort((a, b) => b.score - a.score || a.timeSpent - b.timeSpent);
 
         cachedTeacherSubmissions = submissions;
@@ -1881,12 +1897,10 @@
         const matrix = document.getElementById('detail-answer-matrix');
         matrix.innerHTML = '';
 
-        // Render 50 blocks indicating whether the student answered correctly or incorrectly
         for (let i = 0; i < 50; i++) {
             const block = document.createElement('div');
             block.className = `h-10 rounded-xl flex flex-col items-center justify-center text-[10px] font-bold border transition-all shadow-sm`;
             
-            // If correctArray is missing, construct from mock
             const wasCorrect = s.correctArray ? s.correctArray[i] : (i < s.score);
 
             if (wasCorrect) {
@@ -1908,12 +1922,9 @@
 
     // Export to Excel/CSV
     function exportToCSV() {
-        if (cachedTeacherSubmissions.length === 0) {
-            return;
-        }
+        if (cachedTeacherSubmissions.length === 0) return;
 
         let csvContent = "data:text/csv;charset=utf-8,";
-        // Header
         csvContent += "No,Nama Siswa,Asal Sekolah,Skor Akhir (Maks 50),Jumlah Benar,Jumlah Salah,Waktu Pengerjaan (Menit),Tanggal Ujian\n";
 
         cachedTeacherSubmissions.forEach((s, idx) => {
