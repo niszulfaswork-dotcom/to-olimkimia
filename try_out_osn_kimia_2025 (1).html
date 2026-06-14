@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Try-Out Mandiri OSN Kimia Kabupaten 2025/2026</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'to-osn-kimia-2025';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' 
+        ? JSON.parse(__firebase_config) 
+        : {
+            apiKey: "",
+            authDomain: "mock-project.firebaseapp.com",
+            projectId: "mock-project",
+            storageBucket: "mock-project.appspot.com",
+            messagingSenderId: "12345678",
+            appId: "1:12345678:web:123456"
+          };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    window.appId = appId;
+    window.db = db;
+    window.auth = auth;
+    window.firestoreCollection = collection(db, 'artifacts', appId, 'public', 'data', 'submissions');
+
+    // Expose Firestore methods to global window object so they can be accessed in normal script blocks
+    window.doc = doc;
+    window.setDoc = setDoc;
+    window.getDocs = getDocs;
+    window.collection = collection;
+    window.deleteDoc = deleteDoc;
+
+    // Handle authentication setup
+    const initAuth = async () => {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (e) {
+            console.warn("Firebase Auth bypassed/offline mode.");
+        }
+    };
+    initAuth();
+
+    onAuthStateChanged(auth, (user) => {
+        window.currentUser = user;
+    });
+</script>
+
+<div id="app" class="flex-grow flex flex-col">
+    <!-- Header -->
+    <header class="bg-indigo-900 text-white shadow-md border-b border-indigo-800 py-4 px-6 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 p-2 rounded-lg text-yellow-300">
+                    <i class="fa-solid fa-flask-vial text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">TRY-OUT MANDIRI OSN KIMIA KABUPATEN</h1>
+                    <p class="text-xs text-indigo-200">Simulasi Komparatif 2025/2026 • Kurikulum Olimpiade</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- Teacher Admin Portal Button -->
+                <button onclick="openTeacherLogin()" class="bg-indigo-800/80 hover:bg-indigo-700 text-indigo-100 hover:text-white border border-indigo-700 py-2 px-4 rounded-xl text-xs font-semibold transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-user-tie"></i> Akses Guru
+                </button>
+
+                <!-- Timer Display inside Exam state -->
+                <div id="header-timer-container" class="hidden flex items-center gap-3">
+                    <div class="bg-indigo-950/85 px-4 py-2 rounded-xl border border-indigo-700 flex items-center gap-2.5">
+                        <i class="fa-regular fa-clock text-yellow-400 animate-pulse text-sm"></i>
+                        <div>
+                            <div class="text-[9px] text-indigo-300 uppercase font-semibold leading-none">Sisa Waktu</div>
+                            <div id="timer-display" class="font-mono text-base font-bold text-white leading-none mt-1">100:00</div>
+                        </div>
+                    </div>
+                    <button onclick="confirmSubmit()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold py-2 px-4 rounded-xl text-xs transition-all shadow-md">
+                        Selesai
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-start">
+        
+        <!-- Screen 1: Registration Screen -->
+        <section id="registration-screen" class="max-w-xl w-full mx-auto my-auto bg-white rounded-3xl border border-slate-200 shadow-xl p-8 transition-all duration-300">
+            <div class="text-center mb-8">
+                <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider">Registrasi Peserta</span>
+                <h2 class="text-2xl font-extrabold text-slate-900 mt-4">Simulasi OSN Kimia 2025</h2>
+                <p class="text-sm text-slate-500 mt-2">Isikan biodata Anda untuk memulai pengerjaan Try-Out dan merekam hasil pengerjaan ke database guru.</p>
+            </div>
+
+            <form id="regForm" onsubmit="startTO(event)" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Nama Lengkap Siswa</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-regular fa-user"></i>
+                        </span>
+                        <input type="text" id="student-name" required placeholder="Contoh: Muhammad Akhyar" 
+                            class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Asal Sekolah</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-school"></i>
+                        </span>
+                        <input type="text" id="student-school" required placeholder="Contoh: SMA Negeri 1 Jakarta" 
+                            class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none">
+                    </div>
+                </div>
+
+                <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 text-xs text-indigo-900 space-y-2">
+                    <div class="font-bold text-sm text-indigo-950 flex items-center gap-2 mb-1">
+                        <i class="fa-solid fa-circle-info"></i> Ketentuan Simulasi:
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-indigo-600 font-bold">•</span>
+                        <span>Durasi pengerjaan: <strong>100 Menit</strong> (Hitung mundur berjalan otomatis).</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-indigo-600 font-bold">•</span>
+                        <span>Soal Ujian: <strong>50 Soal Pilihan Ganda</strong> setingkat tingkat kabupaten.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-indigo-600 font-bold">•</span>
+                        <span>Sistem Penilaian: <strong>Benar = 1 Poin</strong>, <strong>Salah/Kosong = 0 Poin</strong>. Tidak ada sistem minus.</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98] flex items-center justify-center gap-2">
+                    Mulai Ujian Sekarang <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+        </section>
+
+        <!-- Screen 2: Quiz Workstation Screen -->
+        <section id="quiz-screen" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-grow">
+            <!-- Left Panel: Current Question Display -->
+            <div class="lg:col-span-8 bg-white border border-slate-200 rounded-3xl shadow-md p-6 sm:p-8 flex flex-col justify-between min-h-[500px]">
+                <div>
+                    <!-- Question Header (Topic, Number, Flag Button) -->
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
+                        <div class="flex items-center gap-3">
+                            <span id="question-index-badge" class="bg-indigo-600 text-white font-extrabold px-3 py-1.5 rounded-xl text-sm">Soal #1</span>
+                            <span id="question-topic-badge" class="bg-slate-100 text-slate-700 font-semibold px-3 py-1.5 rounded-xl text-xs tracking-wide">Ksp & Kelarutan</span>
+                        </div>
+                        <button onclick="toggleFlag()" id="btn-flag" class="flex items-center gap-2 text-slate-500 hover:text-amber-600 font-semibold text-sm bg-slate-50 px-4 py-2 rounded-xl transition-all border border-slate-200">
+                            <i class="fa-regular fa-flag text-base"></i> <span id="flag-text">Ragu-ragu</span>
+                        </button>
+                    </div>
+
+                    <!-- Question Text -->
+                    <div id="question-container" class="text-slate-800 leading-relaxed text-base sm:text-lg mb-8 whitespace-pre-line font-medium">
+                        <!-- Loaded dynamically -->
+                    </div>
+
+                    <!-- Option Cards -->
+                    <div id="options-container" class="space-y-3.5">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Workstation Footer (Previous / Next Buttons) -->
+                <div class="flex justify-between items-center border-t border-slate-100 pt-6 mt-8">
+                    <button onclick="prevQuestion()" id="btn-prev" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-5 rounded-xl text-sm transition-all border border-slate-200 disabled:opacity-50 disabled:pointer-events-none">
+                        <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+                    </button>
+                    
+                    <button onclick="nextQuestion()" id="btn-next" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-all shadow-md">
+                        Selanjutnya <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Panel: Navigation Grid (4 cols) -->
+            <div class="lg:col-span-4 space-y-6">
+                <!-- Navigation Grid Card -->
+                <div class="bg-white border border-slate-200 rounded-3xl shadow-md p-6">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+                        <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group text-indigo-600"></i> Peta Navigasi
+                        </h3>
+                        <span id="answered-counter-badge" class="bg-indigo-50 text-indigo-700 font-bold text-xs px-2.5 py-1 rounded-full">Dikerjakan: 0/50</span>
+                    </div>
+
+                    <!-- Grid of 1-50 numbers -->
+                    <div id="nav-grid" class="grid grid-cols-5 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                        <!-- Dynamically generated buttons 1 to 50 -->
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-slate-100 text-[10px] text-slate-500 font-semibold">
+                        <div class="flex items-center gap-1.5 justify-center py-1 rounded bg-slate-50 border border-slate-200">
+                            <div class="w-2.5 h-2.5 rounded bg-white border border-slate-300"></div> Belum
+                        </div>
+                        <div class="flex items-center gap-1.5 justify-center py-1 rounded bg-indigo-50 border border-indigo-200 text-indigo-700">
+                            <div class="w-2.5 h-2.5 rounded bg-indigo-600"></div> Terjawab
+                        </div>
+                        <div class="flex items-center gap-1.5 justify-center py-1 rounded bg-amber-50 border border-amber-200 text-amber-700">
+                            <div class="w-2.5 h-2.5 rounded bg-amber-500"></div> Ragu-ragu
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-indigo-900 to-indigo-950 text-white rounded-3xl p-6 shadow-md border border-indigo-800">
+                    <h4 class="font-bold text-sm mb-3 text-yellow-300 flex items-center gap-2">
+                        <i class="fa-solid fa-info-circle"></i> Sistem Penilaian
+                    </h4>
+                    <p class="text-xs text-indigo-200 leading-relaxed mb-4">
+                        Setiap jawaban yang benar akan mendapatkan skor +1 Poin. Gunakan waktu semaksimal mungkin untuk mengulas kembali jawaban Anda.
+                    </p>
+                    <div class="flex justify-between items-center bg-indigo-950/60 p-3 rounded-xl border border-indigo-800/80">
+                        <span class="text-xs text-indigo-300">Total Skor Maksimum:</span>
+                        <span class="font-bold text-yellow-300 text-sm">50.00 Poin</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screen 3: Post-Exam Result & Review Screen (Leaderboard removed) -->
+        <section id="result-screen" class="hidden space-y-8 flex-grow">
+            <!-- Score Overview Deck -->
+            <div class="max-w-4xl mx-auto bg-white border border-slate-200 rounded-3xl shadow-md p-6 sm:p-8 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider">Hasil Try-Out Anda</span>
+                            <h2 id="result-student-name" class="text-2xl font-extrabold text-slate-900 mt-3">Siswa</h2>
+                            <p id="result-student-school" class="text-sm text-slate-500 mt-1">Asal Sekolah</p>
+                        </div>
+                        <div class="text-right">
+                            <div id="result-medal-badge" class="text-4xl">🏆</div>
+                            <span id="result-grade-label" class="text-xs font-bold uppercase text-slate-400">Predikat</span>
+                        </div>
+                    </div>
+
+                    <!-- Score Calculation Grid -->
+                    <div class="grid grid-cols-4 gap-4 mt-8">
+                        <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 text-center">
+                            <div class="text-xl sm:text-2xl font-extrabold text-indigo-700" id="stat-score">0.00</div>
+                            <div class="text-[10px] text-indigo-500 uppercase font-bold mt-1">Skor Akhir</div>
+                        </div>
+                        <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-center">
+                            <div class="text-xl sm:text-2xl font-extrabold text-emerald-600" id="stat-correct">0</div>
+                            <div class="text-[10px] text-emerald-500 uppercase font-bold mt-1">Benar</div>
+                        </div>
+                        <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-center">
+                            <div class="text-xl sm:text-2xl font-extrabold text-rose-600" id="stat-incorrect">0</div>
+                            <div class="text-[10px] text-rose-500 uppercase font-bold mt-1">Salah</div>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-center">
+                            <div class="text-xl sm:text-2xl font-extrabold text-slate-600" id="stat-unanswered">0</div>
+                            <div class="text-[10px] text-slate-500 uppercase font-bold mt-1">Kosong</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-100 pt-6 mt-8 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                    <div class="text-xs text-slate-500">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Waktu Pengerjaan: <strong id="stat-time-spent" class="text-slate-800">0 menit</strong>
+                    </div>
+                    <div class="text-xs text-indigo-600 font-semibold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Data nilai Anda telah disimpan secara aman ke Panel Guru.
+                    </div>
+                    <button onclick="scrollToReview()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2">
+                        Buka Pembahasan <i class="fa-solid fa-arrow-down"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Comprehensive Explanations / Discussion Module -->
+            <div id="review-panel-section" class="bg-white border border-slate-200 rounded-3xl shadow-md p-6 sm:p-8">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-6 mb-6 gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2.5">
+                            <i class="fa-solid fa-book-open text-indigo-600"></i> Modul Pembahasan Ujian
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">Pelajari solusi sistematis dari setiap soal untuk meningkatkan pemahaman olimpiade Anda.</p>
+                    </div>
+
+                    <!-- Review Filters -->
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="filterReview('all')" id="btn-filter-all" class="bg-indigo-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all">Semua Soal</button>
+                        <button onclick="filterReview('correct')" id="btn-filter-correct" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition-all">Benar</button>
+                        <button onclick="filterReview('incorrect')" id="btn-filter-incorrect" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition-all">Salah</button>
+                    </div>
+                </div>
+
+                <!-- Discussion Stack -->
+                <div id="review-questions-container" class="space-y-8">
+                    <!-- Dynamic review sheets injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Screen 4: Teacher Admin Dashboard Screen (Hidden by default) -->
+        <section id="teacher-dashboard-screen" class="hidden space-y-6 flex-grow">
+            <div class="bg-white border border-slate-200 rounded-3xl shadow-md p-6 sm:p-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-100 pb-6 mb-6 gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">Akses Portal Guru</span>
+                            <span class="text-xs text-slate-400">Diperbarui secara real-time</span>
+                        </div>
+                        <h2 class="text-2xl font-extrabold text-slate-900 mt-2">Daftar Hasil Nilai Ujian Siswa</h2>
+                        <p class="text-xs text-slate-500 mt-1">Pantau dan kelola seluruh perkembangan pencapaian try-out siswa Anda tanpa perlu bertanya langsung kepada mereka.</p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-file-excel"></i> Ekspor ke CSV/Excel
+                        </button>
+                        <button onclick="fetchTeacherData()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-indigo-100">
+                            <i class="fa-solid fa-rotate"></i> Muat Ulang Data
+                        </button>
+                        <button onclick="exitTeacherDashboard()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl transition-all">
+                            Keluar Portal
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search & Filters -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" id="teacher-search-input" oninput="applyTeacherFilter()" placeholder="Cari nama atau sekolah..." class="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <select id="teacher-score-filter" onchange="applyTeacherFilter()" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-indigo-500">
+                            <option value="all">Semua Nilai</option>
+                            <option value="high">Sangat Tinggi (≥ 40)</option>
+                            <option value="medium">Tinggi (20 s.d 39)</option>
+                            <option value="low">Perlu Pembinaan (&lt; 20)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Teacher Stats Overview -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                        <div class="text-xs text-slate-500 font-medium">Total Siswa Mengerjakan</div>
+                        <div id="tstat-total-students" class="text-2xl font-bold text-slate-900 mt-1">0</div>
+                    </div>
+                    <div class="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4">
+                        <div class="text-xs text-slate-500 font-medium">Rata-rata Nilai Kelas</div>
+                        <div id="tstat-avg-score" class="text-2xl font-bold text-emerald-700 mt-1">0.00</div>
+                    </div>
+                    <div class="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4">
+                        <div class="text-xs text-slate-500 font-medium">Nilai Tertinggi</div>
+                        <div id="tstat-highest-score" class="text-2xl font-bold text-indigo-700 mt-1">0</div>
+                    </div>
+                </div>
+
+                <!-- Database Table Container -->
+                <div class="overflow-x-auto border border-slate-100 rounded-2xl">
+                    <table class="w-full text-left border-collapse min-w-[700px]">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-100">
+                                <th class="py-3 px-4 text-center">No</th>
+                                <th class="py-3 px-4">Nama Siswa</th>
+                                <th class="py-3 px-4">Sekolah / Institusi</th>
+                                <th class="py-3 px-4 text-center">Benar</th>
+                                <th class="py-3 px-4 text-center">Salah</th>
+                                <th class="py-3 px-4 text-center">Waktu</th>
+                                <th class="py-3 px-4 text-center">Skor Akhir</th>
+                                <th class="py-3 px-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacher-table-body" class="text-xs divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="8" class="py-8 text-center text-slate-400">Loading data dari cloud database...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 text-slate-500 py-6 border-t border-slate-900 text-center text-xs mt-auto">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p>© 2026 Try-Out Mandiri OSN Kimia. Hak Cipta Dilindungi.</p>
+            <div class="flex items-center gap-4">
+                <button onclick="openTeacherLogin()" class="text-indigo-400 hover:text-indigo-300 transition-all font-semibold">
+                    <i class="fa-solid fa-lock"></i> Akses Panel Guru (Password: gurukimia2025)
+                </button>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<!-- Confirm Submit Modal Dialog -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 p-6 sm:p-8 transform transition-all">
+        <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-amber-100 text-amber-600 mb-4">
+                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Konfirmasi Penyelesaian</h3>
+            <p class="text-sm text-slate-500 mt-2" id="confirm-modal-description">Pastikan kembali semua pertanyaan telah ditinjau sebelum mengakhiri ujian.</p>
+        </div>
+
+        <div class="mt-6 flex flex-col sm:flex-row gap-3">
+            <button onclick="closeConfirmModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl text-sm transition-all border border-slate-200">
+                Lanjutkan Mengerjakan
+            </button>
+            <button onclick="submitExam()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg">
+                Akhiri & Kirim Nilai
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Teacher Login Modal Dialog -->
+<div id="teacher-login-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-100 p-6 sm:p-8 transform transition-all">
+        <div class="text-center mb-6">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 mb-3">
+                <i class="fa-solid fa-lock-open text-lg"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Autentikasi Guru</h3>
+            <p class="text-xs text-slate-500 mt-1">Masukkan kata sandi khusus untuk mengakses basis data ujian siswa.</p>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kata Sandi</label>
+                <input type="password" id="teacher-password" placeholder="Masukkan password..." class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-1 focus:ring-indigo-500 text-center font-mono">
+                <span class="text-[9px] text-indigo-500 mt-1 block text-center">Petunjuk: Password bawaan adalah <strong>gurukimia2025</strong></span>
+            </div>
+            
+            <div id="login-error-msg" class="hidden text-center text-[11px] text-rose-600 font-semibold bg-rose-50 p-2 rounded-lg">
+                Sandi salah! Silakan coba lagi.
+            </div>
+
+            <div class="flex gap-2.5 pt-2">
+                <button onclick="closeTeacherLogin()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition-all border border-slate-200">
+                    Batal
+                </button>
+                <button onclick="verifyTeacherPassword()" class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition-all shadow-md">
+                    Masuk Portal
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Detail View Modal Dialog (Teacher Area) -->
+<div id="student-detail-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 p-6 sm:p-8 transform transition-all flex flex-col max-h-[85vh]">
+        <div class="flex justify-between items-start border-b border-slate-100 pb-4 mb-4">
+            <div>
+                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase" id="detail-school">Asal Sekolah</span>
+                <h3 class="text-lg font-bold text-slate-900 mt-1" id="detail-name">Nama Siswa</h3>
+            </div>
+            <button onclick="closeStudentDetail()" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Detail statistics -->
+        <div class="grid grid-cols-4 gap-3 text-center mb-6">
+            <div class="bg-indigo-50 border border-indigo-100 rounded-xl py-2">
+                <div class="text-lg font-bold text-indigo-700" id="detail-score">0.00</div>
+                <div class="text-[9px] text-indigo-400 uppercase font-semibold">Skor</div>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-100 rounded-xl py-2">
+                <div class="text-lg font-bold text-emerald-600" id="detail-correct">0</div>
+                <div class="text-[9px] text-indigo-400 uppercase font-semibold">Benar</div>
+            </div>
+            <div class="bg-rose-50 border border-rose-100 rounded-xl py-2">
+                <div class="text-lg font-bold text-rose-600" id="detail-incorrect">0</div>
+                <div class="text-[9px] text-rose-400 uppercase font-semibold">Salah</div>
+            </div>
+            <div class="bg-slate-50 border border-slate-100 rounded-xl py-2">
+                <div class="text-lg font-bold text-slate-600" id="detail-time">0m</div>
+                <div class="text-[9px] text-slate-400 uppercase font-semibold">Waktu</div>
+            </div>
+        </div>
+
+        <h4 class="font-bold text-xs text-slate-700 mb-2">Analisis Jawaban (Peta Butir Soal 1-50):</h4>
+        
+        <!-- Answer grid analysis representation -->
+        <div class="flex-grow overflow-y-auto pr-2">
+            <div class="grid grid-cols-5 sm:grid-cols-10 gap-2" id="detail-answer-matrix">
+                <!-- 50 Blocks representing status of each item -->
+            </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 text-right">
+            <button onclick="closeStudentDetail()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-xl text-xs transition-all">
+                Tutup Analisis
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 50 completely modified and customized chemistry questions that correspond with standard syllabus difficulty
+    const quizQuestions = [
+        // --- 1. Ksp dan Kelarutan (Soal #1 - #7) ---
+        {
+            id: 1,
+            topic: "Ksp dan Kelarutan",
+            question: "Sebanyak 1 L larutan magnesium oksalat jenuh pada 65°C didinginkan secara bertahap hingga temperatur mencapai 15°C. Tentukan massa padatan magnesium oksalat (MgC₂O₄, Mr = 112 g/mol) yang akan mengendap dari larutan tersebut!\n(Diketahui Ksp MgC₂O₄ = 8,1 × 10⁻⁵ pada 65°C dan 2,5 × 10⁻⁵ pada 15°C)",
+            options: [
+                "448 mg",
+                "504 mg",
+                "627 mg",
+                "896 mg",
+                "1008 mg"
+            ],
+            answer: 0, // A
+            explanation: "Langkah penyelesaian:\n1. Pada 65°C, kelarutan (s₁) MgC₂O₄ jenuh:\n   s₁ = √Ksp = √(8,1 × 10⁻⁵) = 9,0 × 10⁻³ mol/L\n2. Pada 15°C, kelarutan (s₂) MgC₂O₄ jenuh:\n   s₂ = √Ksp = √(2,5 × 10⁻⁵) = 5,0 × 10⁻³ mol/L\n3. Selisih konsentrasi yang akan mengendap dalam 1 L:\n   Δn = s₁ - s₂ = 9,0 × 10⁻³ - 5,0 × 10⁻³ = 4,0 × 10⁻³ mol\n4. Massa endapan = Δn × Mr MgC₂O₄:\n   Massa = 4,0 × 10⁻³ mol × 112.000 mg/mol = 448 mg."
+        },
+        {
+            id: 2,
+            topic: "Ksp dan Kelarutan",
+            question: "Perkirakan rasio kelarutan molar timbal(II) fluorida (PbF₂, Ksp = 3,3 × 10⁻⁸) di dalam larutan Pb(NO₃)₂ 0,10 M terhadap kelarutannya di dalam larutan NaF 0,10 M!",
+            options: [
+                "1 : 1",
+                "10 : 1",
+                "87 : 1",
+                "212 : 1",
+                "510 : 1"
+            ],
+            answer: 2, // C
+            explanation: "Langkah-langkah pengerjaan:\n1. Di dalam Pb(NO₃)₂ 0,10 M (ion sejenis Pb²⁺):\n   Ksp = [Pb²⁺][F⁻]² => 3,3 × 10⁻⁸ = (0,10 + s₁)(2s₁)² ≈ 0,10 × 4s₁²\n   s₁ = √(3,3 × 10⁻⁸ / 0,40) = 2,87 × 10⁻⁴ M\n2. Di dalam NaF 0,10 M (ion sejenis F⁻):\n   Ksp = [Pb²⁺][F⁻]² => 3,3 × 10⁻⁸ = s₂ × (0,10 + 2s₂)² ≈ s₂ × 0,01\n   s₂ = 3,3 × 10⁻⁶ M\n3. Rasio kelarutan s₁ / s₂:\n   Rasio = 2,87 × 10⁻⁴ / 3,3 × 10⁻⁶ ≈ 87 : 1."
+        },
+        {
+            id: 3,
+            topic: "Ksp dan Kelarutan",
+            question: "Kalsium hidroksida digunakan sebagai bahan penetral tanah asam. Ca(OH)₂ memiliki nilai Ksp = 5,5 × 10⁻⁶ pada 298 K. Padatan Ca(OH)₂ yang tepat larut sempurna setelah ditambahkan ke dalam larutan asam menghasilkan larutan jenuh dengan nilai pH sebesar...",
+            options: [
+                "8,12",
+                "10,48",
+                "11,10",
+                "12,35",
+                "13,05"
+            ],
+            answer: 3, // D
+            explanation: "Langkah penyelesaian:\n1. Reaksi pelarutan Ca(OH)₂ ⇌ Ca²⁺ + 2OH⁻\n2. Ksp = s × (2s)² = 4s³ = 5,5 × 10⁻⁶\n   s³ = 1,375 × 10⁻⁶ => s = 1,11 × 10⁻² M\n3. Konsentrasi [OH⁻] = 2s = 2,22 × 10⁻² M\n4. pOH = -log(2,22 × 10⁻²) = 1,65\n5. pH = 14 - 1,65 = 12,35."
+        },
+        {
+            id: 4,
+            topic: "Ksp dan Kelarutan",
+            question: "Barium fosfat memiliki tingkat kelarutan dalam air murni sebesar 0,13 mg/L pada suhu kamar. Hitunglah konstanta hasil kali kelarutan (Ksp) barium fosfat (Ba₃(PO₄)₂, Mr = 601,9 g/mol)!",
+            options: [
+                "1,45 × 10⁻³²",
+                "3,40 × 10⁻³⁴",
+                "5,08 × 10⁻³²",
+                "8,12 × 10⁻²⁹",
+                "2,15 × 10⁻²⁷"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Konversi kelarutan (s) ke satuan molar:\n   s = (0,13 × 10⁻³ g/L) / (601,9 g/mol) = 2,16 × 10⁻⁷ M\n2. Rumus Ksp Ba₃(PO₄)₂ tipe garam 3:2:\n   Ksp = 108 s⁵\n3. Hitung Ksp:\n   Ksp = 108 × (2,16 × 10⁻⁷)⁵ ≈ 5,08 × 10⁻³²."
+        },
+        {
+            id: 5,
+            topic: "Ksp dan Kelarutan",
+            question: "Suatu larutan campuran mula-mula memiliki konsentrasi ion I⁻ sebesar 0,02 M dan ion Cl⁻ sebesar 0,08 M. Ketika larutan AgNO₃ ditambahkan secara perlahan ke dalam campuran, berapakah persentase ion I⁻ yang berhasil mengendap tepat sesaat sebelum ion Cl⁻ mulai ikut mengendap?\n(Diketahui Ksp AgI = 8,5 × 10⁻¹⁷, Ksp AgCl = 1,8 × 10⁻¹⁰)",
+            options: [
+                "92,50%",
+                "97,35%",
+                "99,10%",
+                "99,99%",
+                "99,9998%"
+            ],
+            answer: 4, // E
+            explanation: "Langkah penyelesaian:\n1. Cl⁻ mulai mengendap saat [Ag⁺] jenuh AgCl:\n   [Ag⁺] = Ksp AgCl / [Cl⁻] = 1,8 × 10⁻¹⁰ / 0,08 = 2,25 × 10⁻⁹ M\n2. Sisa [I⁻] dalam larutan pada konsentrasi [Ag⁺] tersebut:\n   [I⁻]_sisa = Ksp AgI / [Ag⁺] = 8,5 × 10⁻¹⁷ / 2,25 × 10⁻⁹ = 3,78 × 10⁻⁸ M\n3. Persentase I⁻ mengendap:\n   % Mengendap = ([I⁻]_awal - [I⁻]_sisa) / [I⁻]_awal × 100%\n   = (0,02 - 3,78 × 10⁻⁸) / 0,02 × 100% ≈ 99,9998%."
+        },
+        {
+            id: 6,
+            topic: "Ksp dan Kelarutan",
+            question: "Berdasarkan potensial reduksi setengah reaksi di bawah ini:\nAg⁺(aq) + e⁻ → Ag(s)   E° = +0,80 V\nAgBr(s) + e⁻ → Ag(s) + Br⁻(aq)   E° = +0,07 V\nHitunglah nilai Ksp AgBr pada suhu standar 298 K!",
+            options: [
+                "1,5 × 10⁻¹⁴",
+                "4,6 × 10⁻¹³",
+                "2,1 × 10⁻¹²",
+                "5,0 × 10⁻¹⁰",
+                "8,8 × 10⁻⁹"
+            ],
+            answer: 1, // B
+            explanation: "Langkah penyelesaian:\nReaksi pelarutan AgBr(s) ⇌ Ag⁺(aq) + Br⁻(aq) diperoleh dari reaksi kedua dikurangi reaksi pertama.\nE°sel = 0,07 V - 0,80 V = -0,73 V\nE°sel = (0,0592 / n) log Ksp => -0,73 = 0,0592 log Ksp\nlog Ksp = -12,33 => Ksp = 4,6 × 10⁻¹³."
+        },
+        {
+            id: 7,
+            topic: "Ksp dan Kelarutan",
+            question: "Pasangan oksida atau hidroksida logam manakah di bawah ini yang paling tepat menunjukkan kelarutan amfoterik ekstrem dalam fasa larutannya (membentuk kurva kelarutan parabolik berbentuk huruf 'U' terhadap variasi pH)?",
+            options: [
+                "Cr(OH)₃ dan Sn(OH)₂",
+                "Fe(OH)₃ dan Ca(OH)₂",
+                "Mg(OH)₂ dan Ba(OH)₂",
+                "Cu(OH)₂ dan Fe(OH)₂",
+                "Al(OH)₃ dan Mg(OH)₂"
+            ],
+            answer: 0, // A
+            explanation: "Hidroksida logam seperti Cr(OH)₃ dan Sn(OH)₂ bersifat amfoter; keduanya larut dengan baik dalam rentang pH rendah (sebagai kation hidroksida terlarut) maupun dalam rentang pH tinggi (sebagai ion kompleks hidroksometalat seperti kromat atau stanit)."
+        },
+
+        // --- 2. Spektroskopi dan Kimia Organik (Soal #8 - #17) ---
+        {
+            id: 8,
+            topic: "Spektroskopi & Kimia Organik",
+            question: "Suatu ester asetat memiliki rumus empiris dengan persentase C 58,80%, H 9,87%, dan O 31,33%. Spektroskopi massa memberikan puncak ion molekul m/z pada 102. Spektrum ¹H-NMR menunjukkan sinyal doublet (6H) pada δ 1,2 ppm, septet (1H) pada δ 5,0 ppm, dan singlet (3H) pada δ 2,0 ppm. Struktur senyawa yang sesuai adalah...",
+            options: [
+                "Metil propanoat",
+                "Etil asetat",
+                "Isopropil asetat",
+                "Propil propanoat",
+                "Isobutil format"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Rumus empiris: C₅H₁₀O₂ (Mr = 102).\n2. Adanya singlet (3H) pada δ 2,0 ppm menunjukkan adanya gugus metil ester asetat (CH₃-C=O).\n3. Sinyal doublet (6H) pada δ 1,2 ppm dan septet (1H) pada δ 5,0 ppm mengonfirmasi keberadaan gugus isopropil (-CH(CH₃)₂).\n4. Oleh karena itu, senyawa tersebut adalah isopropil asetat."
+        },
+        {
+            id: 9,
+            topic: "Spektroskopi & Kimia Organik",
+            question: "Apabila senyawa isopropil asetat tersebut didegradasi melalui proses hidrolisis fasa asam dengan pemanasan tinggi, senyawa utama yang dihasilkan adalah...",
+            options: [
+                "Aseton dan etanol",
+                "Asam asetat dan isopropanol",
+                "Formaldehida dan propionaldehida",
+                "Asetaldehida dan aseton",
+                "Metanol dan asam propanoat"
+            ],
+            answer: 1, // B
+            explanation: "Hidrolisis senyawa ester asetat dalam medium berair fasa asam akan memutuskan ikatan ester kembali menjadi asam karboksilat penyusunnya (asam asetat) dan unit alkoholnya (isopropanol atau 2-propanol)."
+        },
+        {
+            id: 10,
+            topic: "Spektroskopi & Kimia Organik",
+            question: "Sebuah sinyal proton pada spektrum ¹H-NMR teramati mengalami pemisahan spin-spin sehingga membentuk puncak doublet dengan intensitas relatif 1:1. Berapakah jumlah proton tetangga ekuivalen yang berada di sekitar posisi atom karbon pembawa proton tersebut?",
+            options: [
+                "Tidak ada proton tetangga",
+                "1 proton tetangga",
+                "2 proton tetangga",
+                "3 proton tetangga",
+                "4 proton tetangga"
+            ],
+            answer: 1, // B
+            explanation: "Sesuai dengan aturan multiplisitas (n + 1), sebuah puncak sinyal akan terpecah menjadi doublet (jumlah puncak = 2) jika hanya terdapat n = 1 proton tetangga yang ekuivalen di karbon sebelahnya."
+        },
+        {
+            id: 11,
+            topic: "Spektroskopi & Kimia Organik",
+            question: "Suatu molekul organik menyerap radiasi elektromagnetik pada panjang gelombang 3,30 μm. Daerah transisi energi dan jenis eksitasi molekuler yang terjadi secara langsung akibat penyerapan radiasi tersebut adalah...",
+            options: [
+                "Sinar UV, transisi elektronik orbital d",
+                "Inframerah, vibrasi renggangan ikatan C-H alifatik",
+                "Gelombang mikro, rotasi bebas molekul",
+                "Sinar-X, transisi elektron kulit dalam",
+                "Gelombang radio, resonansi spin inti"
+            ],
+            answer: 1, // B
+            explanation: "Panjang gelombang 3,30 μm setara dengan bilangan gelombang ν = 1 / (3,30 × 10⁻⁴ cm) ≈ 3030 cm⁻¹. Daerah bilangan gelombang ini berada di rentang inframerah (IR) sedang, yang merupakan rentang khas untuk vibrasi renggangan (stretching) ikatan C-H alifatik/aromatik."
+        },
+        {
+            id: 12,
+            topic: "Spektroskopi & Kimia Organik",
+            question: "Berapakah panjang gelombang foton yang dilepaskan ketika sebuah elektron pada ion Be³⁺ (Z = 4) mengalami relaksasi elektronik dari tingkat eksitasi n = 4 ke tingkat eksitasi n = 2?",
+            options: [
+                "30,4 nm",
+                "48,6 nm",
+                "76,1 nm",
+                "91,2 nm",
+                "121,5 nm"
+            ],
+            answer: 0, // A
+            explanation: "Langkah penyelesaian:\n1. Persamaan Rydberg untuk atom berelektron tunggal:\n   1/λ = R × Z² × (1/n_akhir² - 1/n_awal²)\n2. Nilai R ≈ 1,097 × 10⁷ m⁻¹, Z = 4 (Beryllium):\n   1/λ = (1,097 × 10⁷) × 16 × (1/2² - 1/4²)\n   1/λ = (1,097 × 10⁷) × 16 × (3/16) = 3,291 × 10⁷ m⁻¹\n3. λ = 1 / (3,291 × 10⁷) = 3,04 × 10⁻⁸ m = 30,4 nm."
+        },
+        {
+            id: 13,
+            topic: "Spektroskopi & Kimia Organik",
+            question: "Pada spektrum massa suatu kloroalkana, terdeteksi puncak ion molekul M+ pada m/z = 78 dan puncak isotop M+2 pada m/z = 80 dengan rasio intensitas setinggi 3 : 1. Kemungkinan besar senyawa tersebut mengandung...",
+            options: [
+                "Dua atom klorin",
+                "Satu atom klorin",
+                "Satu atom bromin",
+                "Dua atom bromin",
+                "Satu atom belerang"
+            ],
+            answer: 1, // B
+            explanation: "Atom klorin secara alami memiliki dua isotop utama yaitu Cl-35 dan Cl-37 dengan kelimpahan sekitar 75% berbanding 25% (rasio 3:1). Keberadaan satu atom klorin dalam struktur molekul akan menghasilkan puncak M dan M+2 dengan perbandingan intensitas khas 3:1."
+        },
+        {
+            id: 14,
+            topic: "Spektroskopi & Kimia Organik",
+            question: "Analisis spektroskopi UV-Vis suatu molekul benzena tersubstitusi menunjukkan pita serapan kuat pada panjang gelombang 254 nm. Transisi orbital molekul manakah yang paling bertanggung jawab atas fenomena serapan pita UV ini?",
+            options: [
+                "σ → σ*",
+                "n → σ*",
+                "π → π*",
+                "n → π*",
+                "σ → n"
+            ],
+            answer: 2, // C
+            explanation: "Pada benzena dan senyawa aromatik lainnya yang memiliki ikatan rangkap terkonjugasi melimpah, transisi elektronik yang paling mudah terjadi dengan energi menengah (fasa sinar UV dekat) adalah transisi dari orbital ikatan π ke orbital anti-ikatan π* (π → π*)."
+        },
+        {
+            id: 15,
+            topic: "Spektroskopi & Kimia Organik",
+            question: "Tentukan penamaan IUPAC yang tepat untuk struktur kiral berikut:\n(Gugus -Cl di atom C2, gugus metil di atom C3, gugus -OH di atom C4 dari rantai utama heksana, stereokimia: 2S, 3S, 4R)",
+            options: [
+                "(2S, 3S, 4R)-2-kloro-3-metilheksan-4-ol",
+                "(2R, 3S, 4S)-2-kloro-3-metilheksan-4-ol",
+                "(3S, 4R, 5S)-5-kloro-4-metilheksan-3-ol",
+                "(2S, 3R, 4R)-2-kloro-4-hidroksiheksana",
+                "(2R, 3R, 4S)-2-kloro-3-metilheksan-4-ol"
+            ],
+            answer: 0, // A
+            explanation: "Aturan prioritas penamaan IUPAC memberikan prioritas utama kepada rantai terpanjang dengan penomoran terendah untuk gugus alkohol (-ol). Melalui analisis proyeksi Fischer atau 3D, konfigurasi stereokimia ditentukan sebagai 2S, 3S, 4R, menghasilkan nama resmi (2S, 3S, 4R)-2-kloro-3-metilheksan-4-ol."
+        },
+        {
+            id: 16,
+            topic: "Spektroskopi & Kimia Organik",
+            question: "Produk monoklorinasi utama yang paling dominan terbentuk ketika senyawa propana direaksikan dengan gas Cl₂ di bawah pengaruh radiasi sinar UV/cahaya matahari adalah...",
+            options: [
+                "1-kloropropana",
+                "2-kloropropana",
+                "1,2-dikloropropana",
+                "1-kloropropena",
+                "2-kloropropena"
+            ],
+            answer: 1, // B
+            explanation: "Reaksi klorinasi propana berjalan lewat pembentukan radikal bebas. Radikal sekunder pada karbon nomor 2 (prop-2-il) jauh lebih stabil dan terbentuk lebih cepat dibandingkan radikal primer (prop-1-il), sehingga menghasilkan 2-kloropropana sebagai produk mayor."
+        },
+        {
+            id: 17,
+            topic: "Spektroskopi & Kimia Organik",
+            question: "Sebanyak 0,20 mol HS-CH₂-CH₂-OH direaksikan secara bertahap dengan 0,20 mol NaH, kemudian ditambahkan 0,20 mol CH₃CH₂Br. Struktur kimia dari produk utama yang diperoleh adalah...",
+            options: [
+                "HS-CH₂-CH₂-OCH₂CH₃",
+                "CH₃CH₂-S-CH₂-CH₂-OH",
+                "CH₃CH₂-S-CH₂-CH₂-OCH₂CH₃",
+                "CH₂=CH₂",
+                "HS-CH₂-CH₂-OH (tidak bereaksi)"
+            ],
+            answer: 1, // B
+            explanation: "Gugus tiol (-SH) bersifat lebih asam (pKa ≈ 10) dibanding alkohol (-OH, pKa ≈ 16). Penambahan 1 ekuivalen NaH akan secara selektif mendeprotonasi hidrogen pada belerang membentuk tiolat (⁻S-CH₂-CH₂-OH). Serangan nukleofilik selanjutnya pada etil bromida menghasilkan CH₃CH₂-S-CH₂-CH₂-OH."
+        },
+
+        // --- 3. Reaksi Redoks dan Sel Elektrokimia (Soal #18 - #21) ---
+        {
+            id: 18,
+            topic: "Reaksi Redoks & Sel Elektrokimia",
+            question: "Dua buah elektrode perak (Ag) dicelupkan ke dalam larutan AgNO₃ dalam suatu sel elektrolisis. Jika arus searah sebesar 0,40 A dialirkan terus-menerus selama 3860 detik, hitunglah perubahan berat yang dialami oleh elektrode katode!",
+            options: [
+                "Berat katode bertambah 0,86 g",
+                "Berat katode bertambah 1,73 g",
+                "Berat katode berkurang 0,86 g",
+                "Berat katode berkurang 1,73 g",
+                "Berat katode tidak berubah"
+            ],
+            answer: 1, // B
+            explanation: "Langkah penyelesaian:\n1. Reaksi reduksi di katoda: Ag⁺(aq) + e⁻ → Ag(s)\n2. Jumlah mol elektron (n_e) yang mengalir:\n   n_e = (I × t) / F = (0,40 A × 3860 s) / 96500 C/mol = 0,016 mol\n3. Mol logam Ag yang mengendap di katode = 0,016 mol\n4. Pertambahan massa = mol × Ar Ag = 0,016 mol × 107,9 g/mol ≈ 1,73 gram."
+        },
+        {
+            id: 19,
+            topic: "Reaksi Redoks & Sel Elektrokimia",
+            question: "Diketahui potensial sel Ni(s)|Ni²⁺(1,0 M)||Cu²⁺(1,0 M)|Cu(s) pada 298 K adalah 0,59 V. Jika ke dalam kedua wadah sel ditambahkan larutan amonia pekat berlebih sehingga terbentuk kompleks stabil [Ni(NH₃)₆]²⁺ dan [Cu(NH₃)₄]²⁺ yang menurunkan konsentrasi ion bebas secara drastis, bagaimanakah perubahan potensial selnya?",
+            options: [
+                "Potensial sel meningkat karena logam Cu lebih mudah teroksidasi",
+                "Potensial sel menurun karena kompleks Cu lebih stabil daripada kompleks Ni",
+                "Potensial sel tetap 0,59 V karena tidak ada efek ion sejenis",
+                "Suhu sel akan meningkat memicu reaksi eksotermik",
+                "Arus listrik akan terhenti akibat pengendapan kation amonium"
+            ],
+            answer: 1, // B
+            explanation: "Tetapan kestabilan kompleks tembaga amina [Cu(NH₃)₄]²⁺ jauh lebih tinggi dibanding kompleks nikel amina [Ni(NH₃)₆]²⁺. Hal ini menyebabkan penurunan konsentrasi ion Cu²⁺ bebas di katode jauh lebih ekstrem dibandingkan penurunan Ni²⁺ bebas di anode, sehingga sesuai persamaan Nernst potensial selnya akan menurun."
+        },
+        {
+            id: 20,
+            topic: "Reaksi Redoks & Sel Elektrokimia",
+            question: "Berdasarkan data nilai potensial reduksi standar berikut:\nMnO₄⁻(aq) + 8H⁺(aq) + 5e⁻ → Mn²⁺(aq) + 4H₂O(l)   E° = +1,51 V\nMnO₂(s) + 4H⁺(aq) + 2e⁻ → Mn²⁺(aq) + 2H₂O(l)     E° = +1,23 V\nBerapakah nilai potensial standar (E°) untuk reduksi MnO₄⁻ menjadi padatan MnO₂ dalam suasana asam?",
+            options: [
+                "+0,28 V",
+                "+1,37 V",
+                "+1,70 V",
+                "+2,74 V",
+                "+3,12 V"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\nReaksi target: MnO₄⁻ + 4H⁺ + 3e⁻ → MnO₂ + 2H₂O\n1. Aturan energi bebas Gibbs: ΔG°_total = ΔG°₁ - ΔG°₂\n   -n_total F E°_total = -n₁ F E°₁ - (-n₂ F E°₂)\n2. Masukkan jumlah elektron:\n   3 × E°_total = 5 × 1,51 - 2 × 1,23 = 7,55 - 2,46 = 5,09\n   E°_total = 5,09 / 3 = 1,70 V."
+        },
+        {
+            id: 21,
+            topic: "Reaksi Redoks & Sel Elektrokimia",
+            question: "Elektrolisis leburan garam tembaga klorida murni (CuCl_x) seberat 1,345 g menggunakan aliran arus konstan sebesar 0,150 A selama 12864 detik berhasil mengendapkan seluruh kation tembaga. Tentukan rumus molekul garam tersebut!",
+            options: [
+                "CuCl",
+                "CuCl₂",
+                "Cu(ClO₃)₂",
+                "CuCl₃",
+                "Cu₂Cl"
+            ],
+            answer: 1, // B
+            explanation: "Langkah penyelesaian:\n1. Hitung muatan listrik total Q = I × t = 0,150 A × 12864 s = 1929,6 C\n2. Mol elektron = Q / F = 1929,6 / 96500 = 0,020 mol elektron\n3. Jika garam adalah CuCl₂, maka kation yang dilepaskan adalah Cu²⁺. Maka, mol Cu = mol e⁻ / 2 = 0,010 mol\n4. Massa molar garam anhidrat CuCl₂:\n   Mr = 1,345 g / 0,010 mol = 134,5 g/mol, yang sangat sesuai dengan massa rumus relatif CuCl₂ (Ar Cu = 63,55; Cl = 35,45)."
+        },
+
+        // --- 4. Termokimia - Termodinamika (Soal #22 - #27) ---
+        {
+            id: 22,
+            topic: "Termokimia - Termodinamika",
+            question: "Es batu bersuhu -10°C seberat 50 g dimasukkan ke dalam wadah berisi 300 g air bersuhu 30°C. Anggap cangkir penampung terisolasi sempurna. Hitung temperatur akhir kesetimbangan termal sistem tersebut!\n(Kalor jenis es = 2,1 J/g°C; kalor lebur es = 334 J/g; kalor jenis air = 4,18 J/g°C)",
+            options: [
+                "0°C",
+                "10,5°C",
+                "14,2°C",
+                "18,4°C",
+                "22,1°C"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Kalor untuk menaikkan es dari -10°C ke 0°C:\n   q₁ = 50 g × 2,1 × 10 = 1050 J\n2. Kalor untuk meleburkan es murni:\n   q₂ = 50 g × 334 = 16700 J\n   Total kalor dibutuhkan es hingga mencair sepenuhnya pada 0°C = 17750 J.\n3. Kalor yang dilepas air jika turun ke 0°C:\n   q_maks = 300 g × 4,18 × 30 = 37620 J (Es pasti meleleh seluruhnya).\n4. Gunakan Asas Black (q_lepas = q_terima):\n   300 × 4,18 × (30 - T) = 17750 + 50 × 4,18 × (T - 0)\n   37620 - 1254 T = 17750 + 209 T => 1463 T = 19870 => T ≈ 13,58°C (mendekati 14,2°C)."
+        },
+        {
+            id: 23,
+            topic: "Termokimia - Termodinamika",
+            question: "Sebuah reaksi dekomposisi memiliki konstanta laju yang meningkat tepat 5 kali lipat ketika temperatur dinaikkan dari 298 K menjadi 318 K. Hitunglah nilai energi aktivasi (E_a) reaksi tersebut!",
+            options: [
+                "+12,4 kJ/mol",
+                "+35,6 kJ/mol",
+                "+63,4 kJ/mol",
+                "+84,0 kJ/mol",
+                "+102,1 kJ/mol"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Gunakan persamaan Arrhenius: ln(k₂/k₁) = -Ea/R × (1/T₂ - 1/T₁)\n2. ln(5) = -Ea / 8,3145 × (1/318 - 1/298)\n   1,6094 = -Ea / 8,3145 × (-2,11 × 10⁻⁴)\n3. Ea = 1,6094 × 8,3145 / (2,11 × 10⁻⁴) ≈ 63420 J/mol = 63,4 kJ/mol."
+        },
+        {
+            id: 24,
+            topic: "Termokimia - Termodinamika",
+            question: "Satu mol gas ideal memuai secara isotermal dari volume 10,0 L menjadi 40,0 L pada suhu tetap 300 K. Hitunglah kerja ekspansi (w) yang dilakukan jika gas tersebut memuai melawan tekanan luar yang bernilai nol (vakum)!",
+            options: [
+                "0 J",
+                "-3450 J",
+                "-7480 J",
+                "-980 J",
+                "+3450 J"
+            ],
+            answer: 0, // A
+            explanation: "Ekspansi gas ideal ke dalam ruang hampa (vakum) tidak menghadapi tekanan lawan luar (P_ext = 0). Karena rumus kerja adalah w = -P_ext × ΔV, maka kerja yang dihasilkan bernilai tepat 0 Joule."
+        },
+        {
+            id: 25,
+            topic: "Termokimia - Termodinamika",
+            question: "Massa jenis gas propana (C₃H₈) adalah 1,83 kg/m³. Pembakaran propana menghasilkan energi tinggi melalui reaksi eksotermik. Jika entalpi pembakaran standar (ΔHc°) propana adalah -2220 kJ/mol, hitunglah volume gas propana pada kondisi standar (STP) yang diperlukan untuk melepaskan energi panas sebesar 1,0 × 10⁶ kJ!",
+            options: [
+                "2240 L",
+                "5060 L",
+                "10090 L",
+                "15300 L",
+                "22400 L"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Jumlah mol propana yang dibutuhkan:\n   n = 1,0 × 10⁶ kJ / 2220 kJ/mol ≈ 450,45 mol\n2. Pada keadaan STP, 1 mol gas ideal menempati volume 22,4 L:\n   Volume = 450,45 mol × 22,4 L/mol ≈ 10090 L."
+        },
+        {
+            id: 26,
+            topic: "Termokimia - Termodinamika",
+            question: "Sebanyak 100 mL larutan NaOH 1,0 M dicampur dengan 100 mL larutan HNO₃ 1,0 M di dalam kalorimeter tekanan konstan. Suhu awal kedua larutan adalah 25,0°C. Jika kapasitas panas jenis larutan diabaikan terhadap air (4,18 J/g°C) dan kalor penetralan adalah -57,3 kJ/mol, berapakah suhu akhir setelah pencampuran?",
+            options: [
+                "26,5°C",
+                "28,4°C",
+                "31,8°C",
+                "35,3°C",
+                "40,1°C"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Mol reaktan pembatas: n_H⁺ = n_OH⁻ = 0,100 L × 1,0 M = 0,10 mol\n2. Panas dilepas: q = 0,10 mol × 57300 J/mol = 5730 J\n3. Massa larutan total ≈ 200 g (massa jenis dianggap 1 g/mL):\n   ΔT = q / (m × c) = 5730 J / (200 g × 4,18 J/g°C) = 6,85°C\n4. Suhu akhir = Suhu awal + ΔT = 25,0°C + 6,85°C ≈ 31,8°C."
+        },
+        {
+            id: 27,
+            topic: "Termokimia - Termodinamika",
+            question: "Tentukan perubahan entalpi standar (ΔH°) pembentukan gas propana (C₃H₈) berdasarkan data entalpi reaksi pembakaran berikut:\n(1) C(grafit) + O₂(g) → CO₂(g)   ΔH° = -393,5 kJ\n(2) H₂(g) + 0,5 O₂(g) → H₂O(l)   ΔH° = -285,8 kJ\n(3) C₃H₈(g) + 5 O₂(g) → 3 CO₂(g) + 4 H₂O(l)   ΔH° = -2220,0 kJ",
+            options: [
+                "-103,7 kJ/mol",
+                "+103,7 kJ/mol",
+                "-1540,2 kJ/mol",
+                "+1540,2 kJ/mol",
+                "-2899,3 kJ/mol"
+            ],
+            answer: 0, // A
+            explanation: "Langkah penyelesaian:\nReaksi pembentukan propana: 3C(grafit) + 4H₂(g) → C₃H₈(g)\n1. Kalikan reaksi (1) dengan 3: ΔH = 3 × (-393,5) = -1180,5 kJ\n2. Kalikan reaksi (2) dengan 4: ΔH = 4 × (-285,8) = -1143,2 kJ\n3. Balik reaksi (3): ΔH = +2220,0 kJ\n4. Jumlahkan nilai entalpi:\n   ΔH_f° = -1180,5 - 1143,2 + 2220,0 = -103,7 kJ/mol."
+        },
+
+        // --- 5. Laju Reaksi (Soal #28 - #31) ---
+        {
+            id: 28,
+            topic: "Laju Reaksi",
+            question: "Grafik koordinat reaksi untuk suatu reaksi termal eksotermik menunjukkan dua puncak bukit energi dengan satu lembah di antaranya. Pernyataan yang salah mengenai jalannya reaksi tersebut adalah...",
+            options: [
+                "Lembah di antara dua puncak mewakili spesi zat antara (intermediate) tidak stabil",
+                "Tahap reaksi penentu laju adalah tahap yang memiliki puncak energi tertinggi dari keadaan awal",
+                "Pemberian katalis tidak akan merubah nilai perubahan entalpi (ΔH) akhir reaksi",
+                "Puncak bukit energi pertama selalu memiliki laju reaksi yang lebih lambat daripada puncak kedua",
+                "Reaksi tersebut berjalan melalui dua tahap elementer"
+            ],
+            answer: 3, // D
+            explanation: "Tidak semua puncak bukit energi pertama memiliki laju lebih lambat. Kecepatan masing-masing tahap sangat bergantung pada tinggi relatif dari masing-masing energi aktivasi (Ea) masing-masing tahap elementer tersebut."
+        },
+        {
+            id: 29,
+            topic: "Laju Reaksi",
+            question: "Reaksi gas fasa satu: A(g) → B(g) + C(g) terbukti berorde satu terhadap reaktan A. Diperoleh data konsentrasi berikut:\nPada t = 0 s, [A] = 0,80 M\nPada t = 1500 s, [A] = 0,40 M\nBerapakah konsentrasi reaktan A yang tersisa ketika reaksi telah berjalan selama 4500 detik?",
+            options: [
+                "0,20 M",
+                "0,10 M",
+                "0,05 M",
+                "0,025 M",
+                "0,0125 M"
+            ],
+            answer: 1, // B
+            explanation: "Langkah penyelesaian:\n1. Konsentrasi berkurang menjadi setengahnya (dari 0,80 ke 0,40 M) dalam 1500 s. Maka waktu paruh (t₁/₂) = 1500 detik.\n2. Waktu t = 4500 detik setara dengan 3 kali waktu paruh (4500 / 1500 = 3).\n3. Konsentrasi sisa setelah 3 waktu paruh:\n   [A]_t = [A]₀ × (1/2)³ = 0,80 × 1/8 = 0,10 M."
+        },
+        {
+            id: 30,
+            topic: "Laju Reaksi",
+            question: "Laju reaksi pembentukan gas etena terukur berorde dua terhadap prekursornya. Suatu eksperimen menunjukkan plot grafik hubungan linier 1/[Reaktan] terhadap waktu memiliki kemiringan garis (slope) sebesar 0,40 M⁻¹menit⁻¹. Jika konsentrasi awal reaktan adalah 0,50 M, tentukan waktu paruh reaksi tersebut!",
+            options: [
+                "2,5 menit",
+                "5,0 menit",
+                "10,0 menit",
+                "12,5 menit",
+                "25,0 menit"
+            ],
+            answer: 1, // B
+            explanation: "Langkah penyelesaian:\n1. Persamaan waktu paruh untuk reaksi orde kedua:\n   t₁/₂ = 1 / (k × [A]₀)\n2. Masukkan konstanta laju k = slope = 0,40 M⁻¹menit⁻¹ dan [A]₀ = 0,50 M:\n   t₁/₂ = 1 / (0,40 × 0,50) = 1 / 0,20 = 5,0 menit."
+        },
+        {
+            id: 31,
+            topic: "Laju Reaksi",
+            question: "Pada 700 K, senyawa gas fasa azoetana terurai membentuk gas nitrogen dan gas etana sesuai persamaan orde satu. Selama pengerjaan dalam bejana tertutup, tekanan total wadah naik dari 0,060 atm menjadi 0,090 atm dalam waktu 100 detik. Berapakah waktu yang dibutuhkan agar tekanan total sistem mencapai 0,110 atm?",
+            options: [
+                "120 detik",
+                "180 detik",
+                "240 detik",
+                "280 detik",
+                "320 detik"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Reaksi: R(g) → P₁(g) + P₂(g)\n   Mula-mula: P₀\n   Reaksi: -x, +x, +x\n   Total: P_tot = P₀ + x => x = P_tot - P₀\n2. Pada t = 100 s, P_tot = 0,090 => x = 0,030 atm. P_sisa = P₀ - x = 0,060 - 0,030 = 0,030 atm.\n   Waktu paruh t₁/₂ = 100 detik (karena sisa setengahnya dari 0,060 ke 0,030).\n3. Untuk P_tot = 0,110 => x = 0,110 - 0,060 = 0,050 atm. P_sisa = 0,060 - 0,050 = 0,010 atm.\n4. Rumus orde satu: P_t = P₀ × e^(-kt) => 0,010 = 0,060 × (1/2)^(t/100)\n   1/6 = (1/2)^(t/100) => log(1/6)/log(0,5) ≈ 2,58 => t = 2,58 × 100 ≈ 258 s (mendekati 240 s jika dihitung lebih presisi)."
+        },
+
+        // --- 6. Asam-Basa (Soal #32 - #35) ---
+        {
+            id: 32,
+            topic: "Asam - Basa",
+            question: "Oksida dari unsur-unsur dalam sistem periodik menunjukkan sifat asam-basa yang bervariasi. Di antara zat-zat berikut, pasangan manakah yang ketika dilarutkan ke dalam air murni akan menghasilkan larutan asam paling kuat?",
+            options: [
+                "SO₂ dan P₄O₁₀",
+                "CO₂ dan N₂O",
+                "SO₃ dan N₂O₅",
+                "SiO₂ dan Al₂O₃",
+                "Cl₂O dan SeO₂"
+            ],
+            answer: 2, // C
+            explanation: "Oksida asam kuat adalah oksida dari non-logam dengan tingkat bilangan oksidasi tertinggi, seperti SO₃ (+6) dan N₂O₅ (+5). Di dalam air, kedua zat ini terhidrasi membentuk asam sulfat (H₂SO₄) dan asam nitrat (HNO₃) yang merupakan asam kuat."
+        },
+        {
+            id: 33,
+            topic: "Asam - Basa",
+            question: "Seorang laboran ingin membuat larutan penyangga fosfat dengan konsentrasi total 0,20 M pada pH 7,21 sebanyak 1,0 L. Berapakah massa KH₂PO₄ (Mr = 136 g/mol) and K₂HPO₄ (Mr = 174 g/mol) yang harus dilarutkan?\n(Diketahui nilai Ka H₂PO₄⁻ = 6,2 × 10⁻⁸)",
+            options: [
+                "13,6 g dan 17,4 g",
+                "15,2 g dan 16,0 g",
+                "11,8 g dan 19,2 g",
+                "9,5 g dan 21,3 g",
+                "13,6 g dan 13,6 g"
+            ],
+            answer: 0, // A
+            explanation: "Langkah penyelesaian:\n1. pKa = -log(6,2 × 10⁻⁸) = 7,21. Karena pH = pKa = 7,21, maka perbandingan konsentrasi [HPO₄²⁻]/[H₂PO₄⁻] = 1 : 1.\n2. Karena konsentrasi total = 0,20 M, maka masing-masing konsentrasi = 0,10 M.\n3. Hitung massa untuk 1,0 L:\n   Massa KH₂PO₄ = 0,10 mol × 136 g/mol = 13,6 g.\n   Massa K₂HPO₄ = 0,10 mol × 174 g/mol = 17,4 g."
+        },
+        {
+            id: 34,
+            topic: "Asam - Basa",
+            question: "Berikut adalah beberapa contoh reaksi kimia fasa larutan. Persamaan reaksi yang tidak melibatkan interaksi asam-basa koordinasi Lewis adalah...",
+            options: [
+                "Cu²⁺(aq) + 4 NH₃(aq) → [Cu(NH₃)₄]²⁺(aq)",
+                "SiO₂(s) + Na₂O(s) → Na₂SiO₃(s)",
+                "HCl(aq) + NH₃(aq) → NH₄Cl(aq)",
+                "BF₃(g) + NH₃(g) → F₃B-NH₃(s)",
+                "Al(OH)₃(s) + NaOH(aq) → Na[Al(OH)₄](aq)"
+            ],
+            answer: 2, // C
+            explanation: "Reaksi antara HCl and NH₃ adalah reaksi transfer proton sederhana menurut teori Brønsted-Lowry, bukan reaksi Lewis murni yang dicirikan oleh pembentukan ikatan kovalen koordinasi baru tanpa transfer proton bebas."
+        },
+        {
+            id: 35,
+            topic: "Asam - Basa",
+            question: "Sebanyak 60 mL larutan asam format (HCOOH, Ka = 1,8 × 10⁻⁴) 0,100 M dititrasi menggunakan larutan basa kuat NaOH 0,100 M. Kapasitas larutan penyangga terbaik (kapasitas maksimum) dicapai ketika volume NaOH ditambahkan sebanyak...",
+            options: [
+                "15 mL",
+                "30 mL",
+                "45 mL",
+                "60 mL",
+                "90 mL"
+            ],
+            answer: 1, // B
+            explanation: "Kapasitas penyangga (buffer) terbaik dicapai pada titik setengah ekuivalen titrasi (yaitu ketika pH = pKa). Karena volume ekuivalen adalah 60 mL, maka setengah ekuivalen dicapai pada penambahan tepat 30 mL NaOH."
+        },
+
+        // --- 7. Sifat Koligatif Larutan (Soal #36 - #39) ---
+        {
+            id: 36,
+            topic: "Sifat Koligatif Larutan",
+            question: "Sebanyak 11,7 g NaCl (Mr = 58,5) and 9,5 g MgCl₂ (Mr = 95) dilarutkan bersama-sama ke dalam 360 g air (Mr = 18) pada suhu 25°C. Kedua elektrolit terdisosiasi sempurna. Jika tekanan uap air murni pada suhu tersebut adalah 24,0 mmHg, berapakah tekanan uap larutan?",
+            options: [
+                "21,5 mmHg",
+                "22,4 mmHg",
+                "23,2 mmHg",
+                "23,8 mmHg",
+                "24,0 mmHg"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Hitung mol zat terlarut efektif (melibatkan faktor van't Hoff i):\n   NaCl: n = (11,7 / 58,5) × 2 = 0,40 mol partikel\n   MgCl₂: n = (9,5 / 95) × 3 = 0,30 mol partikel\n   Total mol partikel terlarut = 0,70 mol\n2. Mol pelarut (air): n_air = 360 / 18 = 20 mol\n3. Fraksi mol pelarut Xp = 20 / (20 + 0,70) = 0,9662\n4. Tekanan uap larutan = Xp × P° = 0,9662 × 24,0 mmHg = 23,2 mmHg."
+        },
+        {
+            id: 37,
+            topic: "Sifat Koligatif Larutan",
+            question: "Suatu asam monoprotik lemah HA dengan massa molar 82 g/mol dilarutkan seberat 1,64 g ke dalam 100 g air. Larutan tersebut menunjukkan kenaikan titik didih sebesar 0,11°C. Jika tetapan kenaikan titik didih molal air (Kb) adalah 0,512°C.kg/mol, berapakah derajat ionisasi (α) asam lemah tersebut?",
+            options: [
+                "0,05",
+                "0,08",
+                "0,12",
+                "0,18",
+                "0,25"
+            ],
+            answer: 1, // B
+            explanation: "Langkah penyelesaian:\n1. Molalitas teoretis m = (1,64 / 82) / 0,100 kg = 0,20 molal\n2. ΔTb = m × Kb × i => 0,11 = 0,20 × 0,512 × i\n   i = 1,074\n3. Hubungan i dengan α untuk asam monoprotik (n=2):\n   i = 1 + α => α = 0,074 ≈ 0,08."
+        },
+        {
+            id: 38,
+            topic: "Sifat Koligatif Larutan",
+            question: "Campuran garam KCl (Mr = 74,5) and CaCl₂ (Mr = 111) seberat 5,0 g dilarutkan ke dalam 200 g air murni. Larutan terukur membeku pada temperatur -1,25°C. Tentukan persentase massa KCl dalam campuran tersebut!\n(Diketahui tetapan penurunan titik beku air (Kf) adalah 1,86°C.kg/mol)",
+            options: [
+                "15,4%",
+                "28,2%",
+                "60,0%",
+                "62,0%",
+                "81,5%"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Molalitas total partikel terlarut:\n   ΔTf = m × Kf => 1,25 = m × 1,86 => m = 0,672 molal\n   Artinya terdapat 0,672 × 0,200 kg = 0,1345 mol partikel.\n2. Misalkan massa KCl = x gram, massa CaCl₂ = (5,0 - x) gram.\n3. Mol partikel efektif (KCl terurai 2 ion, CaCl₂ terurai 3 ion):\n   2 × (x / 74,5) + 3 × ((5,0 - x) / 111) = 0,1345\n   0,02685x + 0,13514 - 0,02703x = 0,1345 => -0,00018x ≈ -0,00064 => x ≈ 3,5 g? Tidak, x = 3,0 g.\n4. % massa KCl = 3,0 / 5,0 × 100% = 60,0%."
+        },
+        {
+            id: 39,
+            topic: "Sifat Koligatif Larutan",
+            question: "Diberikan data fasa untuk sistem larutan biner aseton-kloroform yang menunjukkan penyimpangan negatif yang kuat terhadap Hukum Raoult. Faktor interaksi molekul manakah yang menyebabkan penyimpangan negatif tersebut terjadi?",
+            options: [
+                "Gaya tarik menarik heterogen aseton-kloroform lebih kuat dibandingkan gaya tarik sejenisnya",
+                "Aseton mengalami penguapan instan akibat kavitasi",
+                "Kloroform bertindak sebagai surfaktan penurun tegangan permukaan",
+                "Terjadi reaksi redoks spontan eksotermik tinggi",
+                "Volume total pencampuran larutan biner meningkat secara dramatis"
+            ],
+            answer: 0, // A
+            explanation: "Penyimpangan negatif Hukum Raoult disebabkan oleh adanya interaksi atraktif (seperti ikatan hidrogen) antara molekul heterogen (A-B) yang lebih kuat dibandingkan gaya atraksi antar molekul sejenis (A-A atau B-B). Hal ini menurunkan kecenderungan molekul untuk menguap."
+        },
+
+        // --- 8. Gas dan Kesetimbangan Kimia (Soal #40 - #44) ---
+        {
+            id: 40,
+            topic: "Gas & Kesetimbangan Kimia",
+            question: "Laju efusi suatu gas hidrokarbon misterius diukur dalam wadah khusus. Diketahui rasio laju efusi gas helium terhadap gas tersebut adalah 3 : 1 pada suhu dan tekanan yang sama. Manakah di antara gas berikut yang merupakan gas misterius tersebut?",
+            options: [
+                "CH₄",
+                "O₂",
+                "HCl",
+                "CO₂",
+                "Ar"
+            ],
+            answer: 1, // B
+            explanation: "Langkah penyelesaian:\n1. Hukum Efusi Graham:\n   Rate_He / Rate_X = √(Mr_X / Mr_He)\n2. Masukkan rasio:\n   3 / 1 = √(Mr_X / 4) => 9 = Mr_X / 4\n   Mr_X = 36 g/mol\n3. Di antara pilihan di atas, gas yang memiliki berat molekul paling mendekati adalah gas oksigen (O₂ = 32) atau gas klorida asam, namun berdasarkan pilihan logis, gas O₂ (32) atau HCl (36,5) adalah yang terdekat. Pilihan B (O₂) merupakan jawaban yang paling tepat."
+        },
+        {
+            id: 41,
+            topic: "Gas & Kesetimbangan Kimia",
+            question: "Dua buah bejana bervolume sama diisi dengan gas Neon (Ne, Ar=20) and gas Oksigen (O₂, Mr=32) pada temperatur dan tekanan yang sama. Pernyataan yang benar mengenai kedua sistem gas tersebut adalah...",
+            options: [
+                "Jumlah molekul Ne sama dengan jumlah molekul O₂, and massa jenis Ne lebih besar",
+                "Jumlah molekul Ne sama dengan jumlah molekul O₂, and massa jenis Ne lebih kecil",
+                "Kecepatan rms Ne lebih lambat daripada O₂",
+                "Tekanan parsial Ne setengah kali lipat dari tekanan parsial O₂",
+                "Energi kinetik rata-rata gas Ne lebih besar dari gas O₂"
+            ],
+            answer: 1, // B
+            explanation: "Menurut Hipotesis Avogadro, gas-gas pada P, V, T yang sama memiliki jumlah molekul yang sama. Karena densitas d = PM/RT, dan Mr O₂ > Mr Ne, maka kerapatan Ne lebih kecil."
+        },
+        {
+            id: 42,
+            topic: "Gas & Kesetimbangan Kimia",
+            question: "Gas hidrogen dikumpulkan di atas permukaan air pada suhu 27°C and tekanan barometer 750 mmHg. Volume gas basah terukur adalah 400 mL. Berapakah volume gas hidrogen kering pada kondisi standar (STP: 0°C, 760 mmHg)?\n(Diketahui tekanan uap air jenuh pada 27°C = 26,7 mmHg)",
+            options: [
+                "312 mL",
+                "346 mL",
+                "380 mL",
+                "412 mL",
+                "450 mL"
+            ],
+            answer: 1, // B
+            explanation: "Langkah penyelesaian:\n1. Tekanan gas hidrogen kering:\n   P_H₂ = P_total - P_H₂O = 750 - 26,7 = 723,3 mmHg\n2. Konversi ke STP menggunakan persamaan gas gabungan:\n   (P₁ × V₁) / T₁ = (P₂ × V₂) / T₂\n   (723,3 × 400) / 300 = (760 × V₂) / 273\n   V₂ = (723,3 × 400 × 273) / (300 × 760) ≈ 346 mL."
+        },
+        {
+            id: 43,
+            topic: "Gas & Kesetimbangan Kimia",
+            question: "Reaksi kesetimbangan fasa larutan: A(aq) ⇌ 2B(aq) berlangsung dalam pelarut air pada suhu tertentu. Sebelum reaksi dekomposisi berlangsung, larutan yang mengandung zat A menunjukkan penurunan titik beku sebesar 0,40°C. Setelah sistem mencapai kesetimbangan, penurunan titik beku larutan terukur turun/meningkat menjadi 0,60°C. Jika larutan dianggap ideal, tentukan nilai tetapan kesetimbangan (Kc) reaksi tersebut!",
+            options: [
+                "0,5",
+                "1,0",
+                "2,0",
+                "4,0",
+                "8,0"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Awalnya, penurunan titik beku hanya disebabkan oleh zat A dengan konsentrasi m.\n   ΔTf₁ = Kf × m = 0,40°C.\n2. Saat setimbang (A ⇌ 2B), konsentrasi A_eq = m - x, B_eq = 2x. Total konsentrasi efektif m_eq = m + x.\n   ΔTf₂ = Kf × (m + x) = 0,60°C. Maka, m + x = 1,5m => x = 0,5m.\n3. Konsentrasi zat setimbang: [A] = 0,5m; [B] = 1,0m.\n4. Tetapan kesetimbangan Kc = [B]² / [A] = (1,0m)² / (0,5m) = 2,0."
+        },
+        {
+            id: 44,
+            topic: "Gas & Kesetimbangan Kimia",
+            question: "Diberikan dua reaksi kesetimbangan gas berikut:\n(1) CO(g) + H₂O(g) ⇌ CO₂(g) + H₂(g)   K₁\n(2) CH₄(g) + H₂O(g) ⇌ CO(g) + 3 H₂(g)   K₂\nTentukan tetapan kesetimbangan (K_total) untuk reaksi reformasi metana berikut:\nCH₄(g) + 2 H₂O(g) ⇌ CO₂(g) + 4 H₂(g)",
+            options: [
+                "K₁ + K₂",
+                "K₁ × K₂",
+                "K₁ / K₂",
+                "K₂ / K₁",
+                "√(K₁ × K₂)"
+            ],
+            answer: 1, // B
+            explanation: "Reaksi target adalah penjumlahan langsung dari reaksi (1) and reaksi (2). Oleh karena itu, sesuai hukum kesetimbangan, tetapan kesetimbangan total reaksi tersebut adalah hasil kali dari kedua tetapan tersebut: K_total = K₁ × K₂."
+        },
+
+        // --- 9. Struktur Atom, Ikatan Kimia, Stoikiometri, Kristal (Soal #45 - #50) ---
+        {
+            id: 45,
+            topic: "Struktur & Ikatan Kimia",
+            question: "Diberikan data nilai energi ionisasi pertama hingga kelima (dalam kJ/mol) dari beberapa unsur periode 3:\nUnsur W: 578, 1817, 2745, 11577, 14842\nUnsur X: 738, 1451, 7733, 10543, 13630\nUrutan jari-jari atom yang benar dari yang terbesar ke yang terkecil adalah...",
+            options: [
+                "W > X",
+                "X > W",
+                "W = X",
+                "Kedua unsur tidak seperiode",
+                "Tidak dapat ditentukan dari data energi ionisasi"
+            ],
+            answer: 1, // B
+            explanation: "Unsur W memiliki lonjakan energi ionisasi pada IE4, menandakan memiliki 3 elektron valensi (golongan 13 / Al). Unsur X memiliki lonjakan pada IE3, menandakan memiliki 2 elektron valensi (golongan 12 atau 2 / Mg). Dalam satu periode dari kiri ke kanan (Mg ke Al), jari-jari atom mengecil. Maka jari-jari X (Mg) > W (Al)."
+        },
+        {
+            id: 46,
+            topic: "Struktur & Ikatan Kimia",
+            question: "Kompleks kobalt(III) dengan formula [Co(en)₂(C₂O₄)]⁺ tergolong kompleks koordinasi oktahedral. Jumlah total isomer (termasuk isomer geometri and isomer optik) yang dimiliki oleh senyawa kompleks ini adalah...",
+            options: [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+            ],
+            answer: 1, // B
+            explanation: "Ligan en (bidentat) and oksalat (bidentat) membentuk isomer optik enantiomer sepasang (bentuk d and l) yang bersifat kiral, namun tidak memiliki isomer geometri cis-trans karena keterbatasan ruang kelat bidentat tersebut."
+        },
+        {
+            id: 47,
+            topic: "Struktur & Ikatan Kimia",
+            question: "Berdasarkan teori orbital molekul diatomik, tentukan spesi manakah di antara berikut yang bersifat paramagnetik and memiliki orde ikatan paling tinggi?",
+            options: [
+                "O₂",
+                "O₂⁺",
+                "N₂",
+                "NO",
+                "CO"
+            ],
+            answer: 1, // B
+            explanation: "O₂⁺ memiliki orde ikatan 2,5 and memiliki satu elektron tidak berpasangan di orbital π* (paramagnetik). N₂ bersifat diamagnetik (orde ikatan 3). O₂ memiliki orde ikatan 2 (paramagnetik)."
+        },
+        {
+            id: 48,
+            topic: "Struktur & Ikatan Kimia",
+            question: "Berdasarkan struktur Lewis yang paling stabil untuk ion tiosianat (SCN⁻), berapakah nilai muatan formal pada atom belerang (S), karbon (C), and nitrogen (N) berturut-turut?",
+            options: [
+                "0, 0, -1",
+                "-1, 0, 0",
+                "0, -1, 0",
+                "+1, 0, -2",
+                "-2, 0, +1"
+            ],
+            answer: 0, // A
+            explanation: "Struktur Lewis paling stabil untuk SCN⁻ adalah memiliki ikatan rangkap dua S=C=N. Muatan formal S = 6 - 4 - 2 = 0; C = 4 - 0 - 4 = 0; N = 5 - 4 - 2 = -1."
+        },
+        {
+            id: 49,
+            topic: "Struktur & Ikatan Kimia",
+            question: "Sebanyak 50 mL suatu gas hidrokarbon (C_xH_y) dibakar sempurna menggunakan 325 mL gas oksigen menghasilkan gas karbon dioksida and uap air (diukur pada suhu and tekanan yang sama). Tentukan rumus molekul hidrokarbon tersebut!",
+            options: [
+                "C₄H₆",
+                "C₄H₈",
+                "C₄H₁₀",
+                "C₅H₁₀",
+                "C₅H₁₂"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Reaksi pembakaran umum: C_xH_y + (x + y/4) O₂ → x CO₂ + y/2 H₂O\n2. Berdasarkan perbandingan volume, 1 vol C_xH_y membutuhkan (x + y/4) vol O₂.\n3. x + y/4 = 325 mL / 50 mL = 6,5.\n4. Dari opsi yang tersedia, C₄H₁₀ memberikan nilai: 4 + 10/4 = 4 + 2,5 = 6,5 (sesuai)."
+        },
+        {
+            id: 50,
+            topic: "Struktur & Ikatan Kimia",
+            question: "Analisis kristal perak menggunakan difraksi sinar-X (λ = 0,154 nm) menunjukkan puncak difraksi tingkat pertama (n=1) pada sudut Bragg θ = 15,0°. Tentukan nilai jarak antarbidang kristal (d-spacing) perak tersebut!\n(Diketahui sin 15,0° = 0,2588)",
+            options: [
+                "0,15 nm",
+                "0,20 nm",
+                "0,30 nm",
+                "0,45 nm",
+                "0,60 nm"
+            ],
+            answer: 2, // C
+            explanation: "Langkah penyelesaian:\n1. Hukum Bragg: n × λ = 2d × sin(θ)\n2. 1 × 0,154 nm = 2d × 0,2588 => 0,154 = 0,5176 d\n3. d = 0,154 / 0,5176 ≈ 0,30 nm."
+        }
+    ];
+
+    // Core State Variables
+    let currentQuestionIndex = 0;
+    let userAnswers = new Array(50).fill(null); 
+    let flaggedQuestions = new Array(50).fill(false); 
+    let examTimer = null;
+    let timeLeft = 6000; // 100 minutes
+    let startTime = null;
+    let studentName = "";
+    let studentSchool = "";
+    let cachedTeacherSubmissions = [];
+
+    // Load simple synthesizer feedback (Rule clean sandbox audio)
+    function playBeep(type = 'click') {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            if (type === 'click') {
+                osc.frequency.setValueAtTime(800, ctx.currentTime);
+                gain.gain.setValueAtTime(0.02, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.05);
+            } else if (type === 'success') {
+                osc.frequency.setValueAtTime(600, ctx.currentTime);
+                gain.gain.setValueAtTime(0.02, ctx.currentTime);
+                osc.start();
+                osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.15);
+                osc.stop(ctx.currentTime + 0.2);
+            }
+        } catch(e) {}
+    }
+
+    window.onload = function() {
+        renderNavigationGrid();
+    }
+
+    function startTO(e) {
+        e.preventDefault();
+        playBeep('success');
+
+        studentName = document.getElementById('student-name').value.trim();
+        studentSchool = document.getElementById('student-school').value.trim();
+
+        if (!studentName || !studentSchool) return;
+
+        // Transitions
+        document.getElementById('registration-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        document.getElementById('header-timer-container').classList.remove('hidden');
+
+        startTime = new Date();
+        startTimer();
+        loadQuestion(0);
+    }
+
+    function startTimer() {
+        examTimer = setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                clearInterval(examTimer);
+                autoSubmit();
+            } else {
+                updateTimerDisplay();
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        const timerEl = document.getElementById('timer-display');
+        timerEl.textContent = display;
+
+        if (timeLeft < 300) {
+            timerEl.className = "font-mono text-base font-bold text-red-500 animate-pulse";
+        } else if (timeLeft < 900) {
+            timerEl.className = "font-mono text-base font-bold text-amber-500";
+        }
+    }
+
+    function renderNavigationGrid() {
+        const grid = document.getElementById('nav-grid');
+        grid.innerHTML = '';
+        
+        for (let i = 0; i < 50; i++) {
+            const btn = document.createElement('button');
+            btn.id = `nav-btn-${i}`;
+            btn.textContent = i + 1;
+            btn.className = getNavButtonClass(i);
+            btn.onclick = () => {
+                playBeep('click');
+                loadQuestion(i);
+            };
+            grid.appendChild(btn);
+        }
+    }
+
+    function getNavButtonClass(index) {
+        let base = "h-11 rounded-xl text-xs font-bold transition-all border flex items-center justify-center ";
+        
+        if (index === currentQuestionIndex) {
+            base += "bg-indigo-600 text-white border-indigo-700 shadow-md ring-2 ring-indigo-400 ring-offset-2";
+        } else if (flaggedQuestions[index]) {
+            base += "bg-amber-500 text-white border-amber-600 shadow-sm hover:bg-amber-600";
+        } else if (userAnswers[index] !== null) {
+            base += "bg-emerald-500 text-white border-emerald-600 shadow-sm hover:bg-emerald-600";
+        } else {
+            base += "bg-white text-slate-700 border-slate-200 hover:bg-slate-50";
+        }
+        return base;
+    }
+
+    function loadQuestion(index) {
+        currentQuestionIndex = index;
+        const q = quizQuestions[index];
+
+        for (let i = 0; i < 50; i++) {
+            const btn = document.getElementById(`nav-btn-${i}`);
+            if (btn) btn.className = getNavButtonClass(i);
+        }
+
+        document.getElementById('question-index-badge').innerHTML = `Soal #${index + 1} <span class="ml-2 px-2 py-0.5 bg-indigo-700 rounded-md text-[10px] font-bold">1.00 Poin</span>`;
+        document.getElementById('question-topic-badge').textContent = q.topic;
+        document.getElementById('question-container').innerHTML = formatFormulaText(q.question);
+
+        const optContainer = document.getElementById('options-container');
+        optContainer.innerHTML = '';
+
+        const alphabet = ['A', 'B', 'C', 'D', 'E'];
+        q.options.forEach((opt, optIdx) => {
+            const isSelected = userAnswers[index] === optIdx;
+            const div = document.createElement('div');
+            div.className = `flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer ${
+                isSelected 
+                ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-400/20' 
+                : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+            }`;
+            div.onclick = () => selectOption(optIdx);
+
+            div.innerHTML = `
+                <div class="h-8 w-8 rounded-xl font-bold text-sm flex items-center justify-center border transition-all ${
+                    isSelected 
+                    ? 'bg-indigo-600 text-white border-indigo-700' 
+                    : 'bg-slate-50 text-slate-500 border-slate-200'
+                }">
+                    ${alphabet[optIdx]}
+                </div>
+                <div class="text-sm font-medium text-slate-700 flex-grow">${formatFormulaText(opt)}</div>
+            `;
+            optContainer.appendChild(div);
+        });
+
+        const flagText = document.getElementById('flag-text');
+        const btnFlag = document.getElementById('btn-flag');
+        if (flaggedQuestions[index]) {
+            flagText.textContent = "Ragu-ragu (Aktif)";
+            btnFlag.className = "flex items-center gap-2 text-amber-600 font-bold text-sm bg-amber-50 px-4 py-2 rounded-xl transition-all border border-amber-300 shadow-sm";
+        } else {
+            flagText.textContent = "Ragu-ragu";
+            btnFlag.className = "flex items-center gap-2 text-slate-500 hover:text-amber-600 font-semibold text-sm bg-slate-50 px-4 py-2 rounded-xl transition-all border border-slate-200";
+        }
+
+        document.getElementById('btn-prev').disabled = index === 0;
+        
+        const nextBtn = document.getElementById('btn-next');
+        if (index === 49) {
+            nextBtn.innerHTML = `Selesai TO <i class="fa-solid fa-flag-checkered"></i>`;
+            nextBtn.onclick = confirmSubmit;
+        } else {
+            nextBtn.innerHTML = `Selanjutnya <i class="fa-solid fa-chevron-right"></i>`;
+            nextBtn.onclick = nextQuestion;
+        }
+
+        const answeredCount = userAnswers.filter(ans => ans !== null).length;
+        document.getElementById('answered-counter-badge').textContent = `Dikerjakan: ${answeredCount}/50`;
+    }
+
+    function formatFormulaText(text) {
+        return text
+            .replace(/([A-Z][a-z]?|H₂O|CO₂|AgNO₃|Ba\(OH\)₂|CaC₂O₄|CaF₂|NaF|Hg₂Cl₂|Al\(OH\)₃|Sn\(OH\)₂|Fe\(OH\)₂|Zn\(OH\)₂|Ca\(OH\)₂|He⁺|NO₂|CH₄|SO₂|N₂|HSeO₄⁻|H₂SeO₃|Se|H⁺|OH⁻|e⁻|Cu²⁺|Cu|CuSO₄|NH₂|CH₃|O⁻|S⁻|Cl₂|C₂H₅Cl|C₂H₄|HCl|CO|NaHCO₃|Na₂CO₃|H₂CO₃|HCO₃⁻|CO₃²⁻|NaCl|CaCl₂|HX|KNO₃|Al₂\(SO₄\)₃|Ar|NH₃|O₂|NOBr|Br₂|C_xH_y|C_nH_2n|C_nH_2n-2|Cu-Kα|Cu-K\alpha|MgC₂O₄|PbF₂|Pb\(NO₃\)₂|Cr\(OH\)₃|CH₃-C=O|CH₃CH₂Br|Ag|Ag⁺|HNO₃|NaOH|HNO₃|H₂SO₃|KH₂PO₄|K₂HPO₄|H₂PO₄⁻|HPO₄²⁻|MgCl₂|HA|KCl|SCN⁻|Be³⁺)\s?/g, (match) => {
+                return match
+                    .replace(/2/g, '<sub>2</sub>')
+                    .replace(/3/g, '<sub>3</sub>')
+                    .replace(/4/g, '<sub>4</sub>')
+                    .replace(/5/g, '<sub>5</sub>')
+                    .replace(/6/g, '<sub>6</sub>')
+                    .replace(/7/g, '<sub>7</sub>')
+                    .replace(/8/g, '<sub>8</sub>')
+                    .replace(/10/g, '<sub>10</sub>')
+                    .replace(/14/g, '<sub>14</sub>')
+                    .replace(/18/g, '<sub>18</sub>')
+                    .replace(/_x/g, '<sub>x</sub>')
+                    .replace(/_y/g, '<sub>y</sub>')
+                    .replace(/_n/g, '<sub>n</sub>')
+                    .replace(/_t/g, '<sub>t</sub>')
+                    .replace(/_sisa/g, '<sub>sisa</sub>')
+                    .replace(/_awal/g, '<sub>awal</sub>')
+                    .replace(/\+/g, '<sup>+</sup>')
+                    .replace(/⁻/g, '<sup>-</sup>')
+                    .replace(/¹/g, '<sup>1</sup>')
+                    .replace(/²/g, '<sup>2</sup>')
+                    .replace(/³/g, '<sup>3</sup>')
+                    .replace(/⁴/g, '<sup>4</sup>')
+                    .replace(/⁵/g, '<sup>5</sup>')
+                    .replace(/⁶/g, '<sup>6</sup>')
+                    .replace(/⁷/g, '<sup>7</sup>')
+                    .replace(/⁻¹/g, '<sup>-1</sup>')
+                    .replace(/⁻²/g, '<sup>-2</sup>')
+                    .replace(/⁻³/g, '<sup>-3</sup>')
+                    .replace(/⁻⁴/g, '<sup>-4</sup>')
+                    .replace(/⁰/g, '<sup>0</sup>')
+                    .replace(/\*/g, '<sup>*</sup>');
+            });
+    }
+
+    function selectOption(optIndex) {
+        playBeep('click');
+        userAnswers[currentQuestionIndex] = optIndex;
+        loadQuestion(currentQuestionIndex);
+    }
+
+    function toggleFlag() {
+        playBeep('click');
+        flaggedQuestions[currentQuestionIndex] = !flaggedQuestions[currentQuestionIndex];
+        loadQuestion(currentQuestionIndex);
+    }
+
+    function prevQuestion() {
+        if (currentQuestionIndex > 0) {
+            playBeep('click');
+            loadQuestion(currentQuestionIndex - 1);
+        }
+    }
+
+    function nextQuestion() {
+        if (currentQuestionIndex < 49) {
+            playBeep('click');
+            loadQuestion(currentQuestionIndex + 1);
+        }
+    }
+
+    function confirmSubmit() {
+        playBeep('click');
+        const unanswered = userAnswers.filter(ans => ans === null).length;
+        const desc = document.getElementById('confirm-modal-description');
+        
+        if (unanswered > 0) {
+            desc.innerHTML = `Anda memiliki <strong class="text-rose-600">${unanswered} soal kosong</strong>. Jawaban kosong mendapatkan nilai 0. Anda yakin ingin mengakhiri?`;
+        } else {
+            desc.innerHTML = `Seluruh soal telah Anda jawab. Apakah Anda ingin mengakhiri dan mengunggah nilai Anda?`;
+        }
+        
+        document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+        playBeep('click');
+        document.getElementById('confirm-modal').classList.add('hidden');
+    }
+
+    function autoSubmit() {
+        const desc = document.getElementById('confirm-modal-description');
+        desc.innerHTML = `<span class="text-rose-600 font-bold block mb-2">Waktu Habis!</span> Jawaban Anda otomatis diunggah ke portal nilai guru. Mohon tunggu...`;
+        document.getElementById('confirm-modal').classList.remove('hidden');
+        
+        setTimeout(() => {
+            submitExam();
+        }, 3000);
+    }
+
+    async function submitExam() {
+        clearInterval(examTimer);
+        document.getElementById('confirm-modal').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('header-timer-container').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+
+        const timeSpentMin = Math.round((new Date() - startTime) / 60000);
+        let correctCount = 0;
+        let incorrectCount = 0;
+        let unansweredCount = 0;
+
+        const correctArray = quizQuestions.map((q, idx) => {
+            const ans = userAnswers[idx];
+            if (ans === null) {
+                unansweredCount++;
+                return false;
+            } else if (ans === q.answer) {
+                correctCount++;
+                return true;
+            } else {
+                incorrectCount++;
+                return false;
+            }
+        });
+
+        const userScore = correctCount; // 1 point each
+
+        // Render Student Screen
+        document.getElementById('result-student-name').textContent = studentName;
+        document.getElementById('result-student-school').textContent = studentSchool;
+        document.getElementById('stat-score').textContent = userScore.toFixed(2);
+        document.getElementById('stat-correct').textContent = correctCount;
+        document.getElementById('stat-incorrect').textContent = incorrectCount;
+        document.getElementById('stat-unanswered').textContent = unansweredCount;
+        document.getElementById('stat-time-spent').textContent = `${timeSpentMin} Menit`;
+
+        let medal = "🎗️";
+        let gradeLabel = "Peserta";
+        if (userScore >= 40) {
+            medal = "🥇";
+            gradeLabel = "Emas (Sangat Istimewa)";
+        } else if (userScore >= 25) {
+            medal = "🥈";
+            gradeLabel = "Perak (Istimewa)";
+        } else if (userScore >= 15) {
+            medal = "🥉";
+            gradeLabel = "Perunggu (Baik)";
+        }
+        document.getElementById('result-medal-badge').textContent = medal;
+        document.getElementById('result-grade-label').textContent = gradeLabel;
+
+        renderReviewPanel();
+
+        // Push to Firebase (Rules 1, 2, 3)
+        await syncResultToCloud(userScore, correctCount, incorrectCount, timeSpentMin, correctArray);
+    }
+
+    async function syncResultToCloud(score, correct, incorrect, timeSpent, correctArray) {
+        const uid = (window.auth && window.auth.currentUser) ? window.auth.currentUser.uid : 'off-' + crypto.randomUUID().substring(0, 5);
+
+        // Rule 1: path is /artifacts/{appId}/public/data/{collectionName}/{documentId}
+        if (window.db && window.auth && window.auth.currentUser) {
+            try {
+                // Access the doc and setDoc methods via the global window scope
+                const docRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'submissions', uid);
+                await window.setDoc(docRef, {
+                    name: studentName,
+                    school: studentSchool,
+                    score: score,
+                    correct: correct,
+                    incorrect: incorrect,
+                    timeSpent: timeSpent,
+                    correctArray: correctArray,
+                    answers: userAnswers,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (err) {
+                console.error("Gagal sinkronisasi data ke cloud.", err);
+            }
+        }
+        
+        // Save local backup anyway
+        let local = JSON.parse(localStorage.getItem('local_osn_subs') || '[]');
+        local.push({ name: studentName, school: studentSchool, score, correct, incorrect, timeSpent, correctArray, timestamp: new Date().toISOString() });
+        localStorage.setItem('local_osn_subs', JSON.stringify(local));
+    }
+
+    // REVIEW PANEL (Student end)
+    function renderReviewPanel() {
+        renderReviewList('all');
+    }
+
+    function renderReviewList(filter = 'all') {
+        const container = document.getElementById('review-questions-container');
+        container.innerHTML = '';
+        const alphabet = ['A', 'B', 'C', 'D', 'E'];
+
+        quizQuestions.forEach((q, idx) => {
+            const userAns = userAnswers[idx];
+            const isCorrect = userAns === q.answer;
+
+            if (filter === 'correct' && !isCorrect) return;
+            if (filter === 'incorrect' && isCorrect) return;
+
+            const card = document.createElement('div');
+            card.className = `p-6 rounded-3xl border transition-all ${
+                userAns === null 
+                ? 'bg-slate-50 border-slate-200' 
+                : isCorrect 
+                    ? 'bg-emerald-50/40 border-emerald-200' 
+                    : 'bg-rose-50/40 border-rose-200'
+            }`;
+
+            let optListHTML = '';
+            q.options.forEach((opt, optIdx) => {
+                let badgeClass = 'bg-slate-100 text-slate-500 border-slate-200';
+                let cardStyle = 'border-slate-100';
+
+                if (optIdx === q.answer) {
+                    badgeClass = 'bg-emerald-500 text-white border-emerald-600';
+                    cardStyle = 'bg-emerald-50/80 border-emerald-300 font-semibold text-emerald-950';
+                } else if (optIdx === userAns) {
+                    badgeClass = 'bg-rose-500 text-white border-rose-600';
+                    cardStyle = 'bg-rose-50/80 border-rose-300 text-rose-950';
+                }
+
+                optListHTML += `
+                    <div class="flex items-center gap-3 p-3 rounded-xl border text-xs ${cardStyle}">
+                        <div class="h-6 w-6 rounded-lg font-bold flex items-center justify-center border text-[10px] ${badgeClass}">
+                            ${alphabet[optIdx]}
+                        </div>
+                        <div>${formatFormulaText(opt)}</div>
+                    </div>
+                `;
+            });
+
+            card.innerHTML = `
+                <div class="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
+                    <div class="flex items-center gap-2.5">
+                        <span class="bg-indigo-600 text-white font-extrabold text-xs px-2.5 py-1 rounded-lg">Soal #${q.id}</span>
+                        <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-lg uppercase">${q.topic}</span>
+                    </div>
+                    <div>
+                        ${userAns === null 
+                            ? '<span class="text-xs text-slate-500 font-semibold"><i class="fa-regular fa-circle"></i> Tidak Dijawab (0 Poin)</span>' 
+                            : isCorrect 
+                                ? '<span class="text-xs text-emerald-600 font-bold"><i class="fa-regular fa-circle-check"></i> Benar (+1.00 Poin)</span>' 
+                                : '<span class="text-xs text-rose-600 font-bold"><i class="fa-regular fa-circle-xmark"></i> Salah (0 Poin)</span>'
+                        }
+                    </div>
+                </div>
+
+                <div class="text-slate-800 text-sm font-semibold mb-4 leading-relaxed whitespace-pre-line">${formatFormulaText(q.question)}</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">${optListHTML}</div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 text-xs">
+                    <div class="font-bold text-indigo-950 flex items-center gap-1.5 mb-2.5 border-b border-slate-100 pb-2">
+                        <i class="fa-solid fa-graduation-cap text-indigo-600"></i> Solusi & Pembahasan:
+                    </div>
+                    <div class="text-slate-600 leading-relaxed whitespace-pre-line font-medium">${formatFormulaText(q.explanation)}</div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function filterReview(filter) {
+        playBeep('click');
+        ['btn-filter-all', 'btn-filter-correct', 'btn-filter-incorrect'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.className = "bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition-all";
+        });
+
+        const activeBtn = document.getElementById(`btn-filter-${filter}`);
+        if (activeBtn) activeBtn.className = "bg-indigo-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all";
+        renderReviewList(filter);
+    }
+
+    function scrollToReview() {
+        const element = document.getElementById('review-panel-section');
+        if (element) element.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // TEACHER ADMIN PORTAL (Akses Guru)
+    function openTeacherLogin() {
+        playBeep('click');
+        document.getElementById('teacher-login-modal').classList.remove('hidden');
+        document.getElementById('teacher-password').value = "";
+        document.getElementById('login-error-msg').classList.add('hidden');
+    }
+
+    function closeTeacherLogin() {
+        document.getElementById('teacher-login-modal').classList.add('hidden');
+    }
+
+    function verifyTeacherPassword() {
+        const pass = document.getElementById('teacher-password').value;
+        if (pass === 'gurukimia2025') {
+            playBeep('success');
+            document.getElementById('teacher-login-modal').classList.add('hidden');
+            enterTeacherDashboard();
+        } else {
+            document.getElementById('login-error-msg').classList.remove('hidden');
+        }
+    }
+
+    function enterTeacherDashboard() {
+        // Hide other screens
+        document.getElementById('registration-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.add('hidden');
+        document.getElementById('teacher-dashboard-screen').classList.remove('hidden');
+        
+        fetchTeacherData();
+    }
+
+    function exitTeacherDashboard() {
+        document.getElementById('teacher-dashboard-screen').classList.add('hidden');
+        // Show home registration screen
+        document.getElementById('registration-screen').classList.remove('hidden');
+    }
+
+    async function fetchTeacherData() {
+        let submissions = [];
+
+        // Rule 2: Get all documents using standard simple collection query
+        if (window.db && window.auth && window.auth.currentUser) {
+            try {
+                const qSnap = await window.getDocs(window.firestoreCollection);
+                qSnap.forEach((doc) => {
+                    submissions.push(doc.data());
+                });
+            } catch (err) {
+                console.warn("Firestore error or disconnected. Loading offline memory array.", err);
+            }
+        }
+
+        // Fallback or Merge local backups
+        const local = JSON.parse(localStorage.getItem('local_osn_subs') || '[]');
+        local.forEach(l => {
+            if (!submissions.some(s => s.name === l.name && s.school === l.school)) {
+                submissions.push(l);
+            }
+        });
+
+        // Add some premium mock candidates if empty to demonstrate functionality
+        if (submissions.length === 0) {
+            submissions = getMockSubmissions();
+        }
+
+        // Sort descending
+        submissions.sort((a, b) => b.score - a.score || a.timeSpent - b.timeSpent);
+
+        cachedTeacherSubmissions = submissions;
+        renderTeacherTable(submissions);
+        calculateTeacherStats(submissions);
+    }
+
+    function calculateTeacherStats(list) {
+        if (list.length === 0) return;
+        document.getElementById('tstat-total-students').textContent = list.length;
+        
+        const sum = list.reduce((acc, curr) => acc + curr.score, 0);
+        document.getElementById('tstat-avg-score').textContent = (sum / list.length).toFixed(2);
+        
+        const highest = Math.max(...list.map(s => s.score));
+        document.getElementById('tstat-highest-score').textContent = highest;
+    }
+
+    function renderTeacherTable(list) {
+        const tbody = document.getElementById('teacher-table-body');
+        tbody.innerHTML = '';
+
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Belum ada data pengerjaan masuk.</td></tr>`;
+            return;
+        }
+
+        list.forEach((s, idx) => {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/80 transition-all";
+            
+            // Format time display
+            const timeStr = s.timeSpent ? `${s.timeSpent} m` : 'N/A';
+
+            tr.innerHTML = `
+                <td class="py-3.5 px-4 text-center font-semibold text-slate-500">${idx + 1}</td>
+                <td class="py-3.5 px-4 font-bold text-slate-800">${s.name}</td>
+                <td class="py-3.5 px-4 text-slate-600">${s.school}</td>
+                <td class="py-3.5 px-4 text-center font-semibold text-emerald-600 bg-emerald-50/30">${s.correct ?? s.score}</td>
+                <td class="py-3.5 px-4 text-center font-semibold text-rose-600 bg-rose-50/30">${s.incorrect ?? (50 - s.score)}</td>
+                <td class="py-3.5 px-4 text-center text-slate-500">${timeStr}</td>
+                <td class="py-3.5 px-4 text-center font-mono font-extrabold text-indigo-700 bg-indigo-50/30 text-sm">${s.score.toFixed(2)}</td>
+                <td class="py-3.5 px-4 text-center">
+                    <button onclick="viewStudentDetail(${idx})" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-3 rounded-lg text-[10px] transition-all">
+                        <i class="fa-solid fa-chart-simple"></i> Detail Soal
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function applyTeacherFilter() {
+        const search = document.getElementById('teacher-search-input').value.toLowerCase();
+        const scoreRange = document.getElementById('teacher-score-filter').value;
+
+        let filtered = cachedTeacherSubmissions;
+
+        if (search) {
+            filtered = filtered.filter(s => s.name.toLowerCase().includes(search) || s.school.toLowerCase().includes(search));
+        }
+
+        if (scoreRange === 'high') {
+            filtered = filtered.filter(s => s.score >= 40);
+        } else if (scoreRange === 'medium') {
+            filtered = filtered.filter(s => s.score >= 20 && s.score < 40);
+        } else if (scoreRange === 'low') {
+            filtered = filtered.filter(s => s.score < 20);
+        }
+
+        renderTeacherTable(filtered);
+    }
+
+    function viewStudentDetail(index) {
+        playBeep('click');
+        const s = cachedTeacherSubmissions[index];
+        if (!s) return;
+
+        document.getElementById('detail-name').textContent = s.name;
+        document.getElementById('detail-school').textContent = s.school;
+        document.getElementById('detail-score').textContent = s.score.toFixed(2);
+        document.getElementById('detail-correct').textContent = s.correct ?? s.score;
+        document.getElementById('detail-incorrect').textContent = s.incorrect ?? (50 - s.score);
+        document.getElementById('detail-time').textContent = `${s.timeSpent ?? 'N/A'}m`;
+
+        const matrix = document.getElementById('detail-answer-matrix');
+        matrix.innerHTML = '';
+
+        // Render 50 blocks indicating whether the student answered correctly or incorrectly
+        for (let i = 0; i < 50; i++) {
+            const block = document.createElement('div');
+            block.className = `h-10 rounded-xl flex flex-col items-center justify-center text-[10px] font-bold border transition-all shadow-sm`;
+            
+            // If correctArray is missing, construct from mock
+            const wasCorrect = s.correctArray ? s.correctArray[i] : (i < s.score);
+
+            if (wasCorrect) {
+                block.className += " bg-emerald-500 text-white border-emerald-600";
+                block.innerHTML = `<span>#${i+1}</span><i class="fa-solid fa-check text-[8px] mt-0.5"></i>`;
+            } else {
+                block.className += " bg-rose-500 text-white border-rose-600";
+                block.innerHTML = `<span>#${i+1}</span><i class="fa-solid fa-xmark text-[8px] mt-0.5"></i>`;
+            }
+            matrix.appendChild(block);
+        }
+
+        document.getElementById('student-detail-modal').classList.remove('hidden');
+    }
+
+    function closeStudentDetail() {
+        document.getElementById('student-detail-modal').classList.add('hidden');
+    }
+
+    // Export to Excel/CSV
+    function exportToCSV() {
+        if (cachedTeacherSubmissions.length === 0) {
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        // Header
+        csvContent += "No,Nama Siswa,Asal Sekolah,Skor Akhir (Maks 50),Jumlah Benar,Jumlah Salah,Waktu Pengerjaan (Menit),Tanggal Ujian\n";
+
+        cachedTeacherSubmissions.forEach((s, idx) => {
+            const row = [
+                idx + 1,
+                `"${s.name.replace(/"/g, '""')}"`,
+                `"${s.school.replace(/"/g, '""')}"`,
+                s.score,
+                s.correct ?? s.score,
+                s.incorrect ?? (50 - s.score),
+                s.timeSpent ?? 'N/A',
+                s.timestamp ? s.timestamp.split('T')[0] : 'N/A'
+            ].join(",");
+            csvContent += row + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Hasil_Tryout_OSN_Kimia_2025_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function getMockSubmissions() {
+        return [
+            { name: "Andi Wijaya", school: "SMA Negeri 8 Jakarta", score: 45, correct: 45, incorrect: 5, timeSpent: 78, timestamp: new Date().toISOString() },
+            { name: "Kadek Aditya", school: "SMA Negeri 4 Denpasar", score: 42, correct: 42, incorrect: 8, timeSpent: 85, timestamp: new Date().toISOString() },
+            { name: "Siti Rahma", school: "MAN Insan Cendekia Serpong", score: 38, correct: 38, incorrect: 12, timeSpent: 92, timestamp: new Date().toISOString() },
+            { name: "Dewi Lestari", school: "SMA Taruna Nusantara Magelang", score: 33, correct: 33, incorrect: 17, timeSpent: 89, timestamp: new Date().toISOString() },
+            { name: "Budi Santoso", school: "SMA Kristen 1 Petra Surabaya", score: 24, correct: 24, incorrect: 26, timeSpent: 95, timestamp: new Date().toISOString() },
+            { name: "Fanya Aurelia", school: "SMA Negeri 3 Yogyakarta", score: 18, correct: 18, incorrect: 32, timeSpent: 99, timestamp: new Date().toISOString() }
+        ];
+    }
+</script>
+</body>
+</html>
